@@ -12,6 +12,7 @@
     <WriteLinesToFile File="$(MSBuildProjectDirectory)/obfuscate.stamp" 
                     Lines="true" 
                     Overwrite="true" />
+    <Message Importance="High" Text="Obfuscate process completed." />
 
     <!-- TODO: Obfuscate process -->
     </Target>
