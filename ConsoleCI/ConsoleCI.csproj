@@ -17,4 +17,8 @@
     <!-- TODO: Obfuscate process -->
     </Target>
 
+    <Target Name="ForceFailure" AfterTargets="Build">
+        <Error Text="Forced failure for testing notification" />
+    </Target>
+
 </Project>
