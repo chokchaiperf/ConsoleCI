@@ -1,0 +1,160 @@
+version: 2.1
+
+notify-telegram: &notify-telegram
+  run:
+    name: Notify Telegram
+    when: on_success
+    command: |
+      SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
+      COMMIT_MSG=$(git log -1 --pretty=format:"%s")
+      NL=$'\n'
+      # STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
+      # if [ -f "$STAMP" ]; then
+      #   OBFUSCATE="true"
+      # else
+      #   OBFUSCATE="false"
+      # fi
+      OBFUSCATE="true"
+ 
+      # Parse tag
+      if [ -n "$CIRCLE_TAG" ]; then
+        if [[ $CIRCLE_TAG =~ ^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$ ]]; then
+          SLOT_KEY="${BASH_REMATCH[1]}"
+          APP_VERSION="v${BASH_REMATCH[2]}"
+          case $SLOT_KEY in
+            sand)    SLOT_DISPLAY="Sandbox" ;;
+            dev)     SLOT_DISPLAY="Development" ;;
+            staging) SLOT_DISPLAY="Staging" ;;
+            prod)    SLOT_DISPLAY="Production" ;;
+            *)       SLOT_DISPLAY=$(echo $SLOT_KEY | tr '[:lower:]' '[:upper:]') ;;
+          esac
+        fi
+        TITLE="🚀 <b>Release: $APP_VERSION</b>"
+        EXTRA="${NL}📦 <b>Release Slot</b>  <code>$SLOT_DISPLAY</code>${NL}🔐 <b>Obfuscate</b>  <code>$OBFUSCATE</code>${NL}🏷 <b>App Version</b>  <code>$APP_VERSION</code>"
+      else
+        TITLE="✅ <b>Success: $CIRCLE_JOB</b>"
+        EXTRA=""
+      fi
+ 
+      MESSAGE="${TITLE}${NL}${NL}"
+      MESSAGE+="🌿 <b>Branch</b>  <code>${CIRCLE_BRANCH:-$CIRCLE_TAG}</code>"
+      MESSAGE+="${EXTRA:+$EXTRA}"
+      MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
+      MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
+      MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
+      MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>"
+ 
+      # ใช้ jq build JSON เพื่อหลีกเลี่ยง quote และ special character ใน URL
+      jq -n \
+        --arg chat_id "$TELEGRAM_CHAT_ID" \
+        --arg text "$MESSAGE" \
+        '{chat_id: $chat_id, text: $text, parse_mode: "HTML", disable_web_page_preview: true}' | \
+      curl -s -o /dev/null -X POST \
+        "https://api.telegram.org/bot$TELEGRAM_BOT_TOKEN/sendMessage" \
+        -H "Content-Type: application/json" \
+        -d @-
+
+jobs:
+  android_build_test:
+    docker:
+      - image: cimg/android:2024.01
+
+    steps:
+      - checkout
+
+      - run:
+          name: Grant execute permission
+          command: chmod +x gradlew
+
+      - restore_cache:
+          keys:
+            - gradle-android-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "shared/build.gradle.kts" }}-{{ checksum "KotlinCICD/build.gradle.kts" }}
+            - gradle-android-{{ checksum "gradle/libs.versions.toml" }}
+
+      - run:
+          name: Build shared (Android)
+          command: ./gradlew :shared:assemble
+
+      - run:
+          name: Build Android app
+          command: ./gradlew :KotlinCICD:assembleDebug
+
+      - run:
+          name: Run shared unit tests
+          command: ./gradlew :shared:testDebugUnitTest
+
+      - run:
+          name: Run Android unit tests
+          command: ./gradlew :KotlinCICD:testDebugUnitTest
+
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-android-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "shared/build.gradle.kts" }}-{{ checksum "KotlinCICD/build.gradle.kts" }}
+
+      - store_test_results:
+          path: shared/build/test-results
+
+      - store_test_results:
+          path: KotlinCICD/build/test-results
+      - *notify-telegram
+
+  ios_build_test:
+    macos:
+      xcode: "15.4.0"
+
+    steps:
+      - checkout
+
+      - run:
+          name: Setup JDK 17
+          command: |
+            brew install --cask temurin@17
+            echo 'export JAVA_HOME=$(/usr/libexec/java_home -v 17)' >> "$BASH_ENV"
+            source "$BASH_ENV"
+
+      - run:
+          name: Grant execute permission
+          command: chmod +x gradlew
+
+      - restore_cache:
+          keys:
+            - gradle-ios-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "shared/build.gradle.kts" }}
+            - gradle-ios-{{ checksum "gradle/libs.versions.toml" }}
+            - konan-{{ checksum "gradle/libs.versions.toml" }}
+
+      - run:
+          name: Build iOS framework
+          command: ./gradlew :shared:linkDebugFrameworkIosSimulatorArm64
+
+      - run:
+          name: Run iOS simulator tests
+          command: ./gradlew :shared:iosSimulatorArm64Test
+
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+            - ~/.konan
+          key: gradle-ios-{{ checksum "gradle/libs.versions.toml" }}-{{ checksum "shared/build.gradle.kts" }}
+
+      - store_test_results:
+          path: shared/build/test-results
+      - *notify-telegram
+
+workflows:
+  build_and_test:
+    jobs:
+      - android_build_test:
+          filters:
+            tags:
+              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/  # match format ของคุณ
+            branches:
+              only: /.*/
+      - ios_build_test:
+          filters:
+            tags:
+              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/  # match format ของคุณ
+            branches:
+              only: /.*/
