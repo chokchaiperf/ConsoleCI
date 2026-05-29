@@ -8,11 +8,16 @@ notify-telegram: &notify-telegram
       SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
- 
-      # Parse tag + ตรวจสอบ Obfuscate จาก SLOT_KEY
-      # $(Ring) ถูกกำหนดจาก tag เท่านั้น → rel-v* คือ Ring=rel → Obfuscate ทำงาน
-      OBFUSCATE="false"
- 
+
+      # ตรวจสอบ Obfuscate จาก stamp file (ยืนยันว่า target รันจริง)
+      STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
+      if [ -f "$STAMP" ]; then
+        OBFUSCATE="true"
+      else
+        OBFUSCATE="false"
+      fi
+
+      # Parse tag
       if [ -n "$CIRCLE_TAG" ]; then
         if [[ $CIRCLE_TAG =~ ^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$ ]]; then
           SLOT_KEY="${BASH_REMATCH[1]}"
@@ -21,7 +26,7 @@ notify-telegram: &notify-telegram
             sand)    SLOT_DISPLAY="Sandbox" ;;
             dev)     SLOT_DISPLAY="Development" ;;
             staging) SLOT_DISPLAY="Staging" ;;
-            rel)     SLOT_DISPLAY="Release" ; OBFUSCATE="true" ;;
+            rel)     SLOT_DISPLAY="Release" ;;
             prod)    SLOT_DISPLAY="Production" ;;
             *)       SLOT_DISPLAY=$(echo $SLOT_KEY | tr '[:lower:]' '[:upper:]') ;;
           esac
@@ -32,7 +37,7 @@ notify-telegram: &notify-telegram
         TITLE="✅ <b>Success: $CIRCLE_JOB</b>"
         EXTRA=""
       fi
- 
+
       MESSAGE="${TITLE}${NL}${NL}"
       MESSAGE+="🌿 <b>Branch</b>  <code>${CIRCLE_BRANCH:-$CIRCLE_TAG}</code>"
       MESSAGE+="${EXTRA:+$EXTRA}"
@@ -41,7 +46,7 @@ notify-telegram: &notify-telegram
       MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
       MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
       MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>"
- 
+
       # ใช้ jq build JSON เพื่อหลีกเลี่ยง quote และ special character ใน URL
       jq -n \
         --arg chat_id "$TELEGRAM_CHAT_ID" \
@@ -56,47 +61,47 @@ jobs:
   build_test:
     docker:
       - image: mcr.microsoft.com/dotnet/sdk:10.0
- 
+
     steps:
       - checkout
 
       - run:
           name: Install jq
           command: apt-get update -qq && apt-get install -y -qq jq
- 
+
       - run:
           name: Generate NuGet cache key
           command: |
             find . -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*" \
               | sort | xargs cat > /tmp/nuget-cache-key.txt
- 
+
       - restore_cache:
           keys:
             - nuget-{{ checksum "/tmp/nuget-cache-key.txt" }}
             - nuget-
- 
+
       - run:
           name: Restore dependencies
           command: dotnet restore
- 
+
       - run:
           name: Build
           command: dotnet build --no-restore --configuration Release
- 
+
       - run:
           name: Run tests
           command: |
             dotnet test --no-build --configuration Release \
               --logger "junit;LogFilePath=test-results/results.xml"
- 
+
       - save_cache:
           paths:
             - ~/.nuget/packages
           key: nuget-{{ checksum "/tmp/nuget-cache-key.txt" }}
- 
+
       - store_test_results:
           path: test-results
- 
+
       - *notify-telegram
 
 workflows:
@@ -105,6 +110,6 @@ workflows:
       - build_test:
           filters:
             tags:
-              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/  # match format ของคุณ
+              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/
             branches:
               only: /.*/
