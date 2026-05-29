@@ -9,6 +9,14 @@ notify-telegram: &notify-telegram
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
 
+      if [ "$CIRCLECI" = "true" ]; then
+        CI_SOURCE="CircleCI"
+      elif [ "$GITHUB_ACTIONS" = "true" ]; then
+        CI_SOURCE="GitHub Actions"
+      else
+        CI_SOURCE="Unknown"
+      fi
+
       STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
       if [ -f "$STAMP" ]; then
         OBFUSCATE="true"
@@ -38,6 +46,7 @@ notify-telegram: &notify-telegram
       fi
 
       MESSAGE="${TITLE}${NL}${NL}"
+      MESSAGE+="⚙️ <b>CI</b>  <code>$CI_SOURCE</code>${NL}"
       MESSAGE+="🌿 <b>Branch</b>  <code>${CIRCLE_BRANCH:-$CIRCLE_TAG}</code>"
       MESSAGE+="${EXTRA:+$EXTRA}"
       MESSAGE+="${NL}🔒 <b>Obfuscate</b>  <code>$OBFUSCATE</code>"
@@ -96,7 +105,7 @@ jobs:
           command: |
             dotnet test --no-build --configuration Release \
               --logger "junit;LogFilePath=test-results/results.xml"
-              
+
       - save_cache:
           paths:
             - ~/.nuget/packages
