@@ -8,6 +8,7 @@ notify-telegram: &notify-telegram
       SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
+      TIMESTAMP=$(date -u '+%d/%m/%Y %H:%M UTC')
 
       if [ "$CIRCLECI" = "true" ]; then
         CI_SOURCE="CircleCI"
@@ -54,6 +55,7 @@ notify-telegram: &notify-telegram
       MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
       MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
       MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>"
+      MESSAGE+="🕐 <b>Reported at</b>  <code>$TIMESTAMP</code>"
 
       # ใช้ jq build JSON เพื่อหลีกเลี่ยง quote และ special character ใน URL
       jq -n \
