@@ -7,4 +7,13 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <Target Name="Obfuscate" AfterTargets="_LinkAssemblies" BeforeTargets="_BuildAppBundle">
+
+    <WriteLinesToFile File="$(OutputPath)obfuscate.stamp" 
+                    Lines="true" 
+                    Overwrite="true" />
+
+    <!-- TODO: Obfuscate process -->
+    </Target>
+
 </Project>
