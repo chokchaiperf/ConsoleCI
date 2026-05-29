@@ -50,7 +50,7 @@ jobs:
           path: test-results/
 
       - name: Notify Telegram
-        if: success()
+        if: always()
         run: |
           SHORT_SHA=$(echo "$GITHUB_SHA" | cut -c1-7)
           COMMIT_MSG=$(git log -1 --pretty=format:"%s")
@@ -74,6 +74,7 @@ jobs:
             CI_SOURCE="Unknown"
           fi
 
+          # Parse tag
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             TAG="$GITHUB_REF_NAME"
             if [[ $TAG =~ ^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$ ]]; then
@@ -88,21 +89,29 @@ jobs:
                 *)       SLOT_DISPLAY=$(echo $SLOT_KEY | tr '[:lower:]' '[:upper:]') ;;
               esac
             fi
-            TITLE="🚀 <b>Release: $APP_VERSION</b>"
+            if [ "$JOB_STATUS" = "success" ]; then
+              TITLE="🚀 <b>Release: $APP_VERSION</b>"
+            else
+              TITLE="❌ <b>Failed: $APP_VERSION</b>"
+            fi
             EXTRA="${NL}📦 <b>Release Slot</b>  <code>$SLOT_DISPLAY</code>${NL}🏷 <b>App Version</b>  <code>$APP_VERSION</code>"
           else
-            TITLE="✅ <b>Success: $GITHUB_JOB</b>"
+            if [ "$JOB_STATUS" = "success" ]; then
+              TITLE="✅ <b>Success: $GITHUB_JOB</b>"
+            else
+              TITLE="❌ <b>Failed: $GITHUB_JOB</b>"
+            fi
             EXTRA=""
           fi
 
           MESSAGE="${TITLE}${NL}${NL}"
-          MESSAGE+="⚙️ <b>CI</b>  <code>$CI_SOURCE</code>${NL}"
           MESSAGE+="🌿 <b>Branch</b>  <code>${GITHUB_REF_NAME}</code>"
           MESSAGE+="${EXTRA:+$EXTRA}"
           MESSAGE+="${NL}🔒 <b>Obfuscate</b>  <code>$OBFUSCATE</code>"
           MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
           MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
           MESSAGE+="👤 <b>Triggered by</b>  $GITHUB_ACTOR${NL}"
+          MESSAGE+="⚙️ <b>CI</b>  <code>$CI_SOURCE</code>${NL}"
           MESSAGE+="🔗 <a href=\"$BUILD_URL\">Run #$GITHUB_RUN_NUMBER</a>${NL}"
           MESSAGE+="🕐 <b>Reported at</b>  <code>$TIMESTAMP</code>"
 
@@ -117,3 +126,4 @@ jobs:
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}

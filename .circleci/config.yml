@@ -1,15 +1,28 @@
 version: 2.1
 
+set-success: &set-success
+  run:
+    name: Set build status (success)
+    when: on_success
+    command: echo 'export BUILD_STATUS="success"' >> $BASH_ENV
+ 
+set-failure: &set-failure
+  run:
+    name: Set build status (failure)
+    when: on_fail
+    command: echo 'export BUILD_STATUS="failed"' >> $BASH_ENV
+ 
 notify-telegram: &notify-telegram
   run:
     name: Notify Telegram
-    when: on_success
+    when: always
     command: |
       SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
       TIMESTAMP=$(TZ='Asia/Bangkok' date '+%d/%m/%Y %H:%M ICT')
-
+ 
+      # ระบุ CI source
       if [ "$CIRCLECI" = "true" ]; then
         CI_SOURCE="CircleCI"
       elif [ "$GITHUB_ACTIONS" = "true" ]; then
@@ -17,14 +30,14 @@ notify-telegram: &notify-telegram
       else
         CI_SOURCE="Unknown"
       fi
-
+      
       STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
       if [ -f "$STAMP" ]; then
         OBFUSCATE="true"
       else
         OBFUSCATE="false"
       fi
-
+ 
       # Parse tag
       if [ -n "$CIRCLE_TAG" ]; then
         if [[ $CIRCLE_TAG =~ ^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$ ]]; then
@@ -39,24 +52,32 @@ notify-telegram: &notify-telegram
             *)       SLOT_DISPLAY=$(echo $SLOT_KEY | tr '[:lower:]' '[:upper:]') ;;
           esac
         fi
-        TITLE="🚀 <b>Release: $APP_VERSION</b>"
+        if [ "$BUILD_STATUS" = "success" ]; then
+          TITLE="🚀 <b>Release: $APP_VERSION</b>"
+        else
+          TITLE="❌ <b>Failed: $APP_VERSION</b>"
+        fi
         EXTRA="${NL}📦 <b>Release Slot</b>  <code>$SLOT_DISPLAY</code>${NL}🏷 <b>App Version</b>  <code>$APP_VERSION</code>"
       else
-        TITLE="✅ <b>Success: $CIRCLE_JOB</b>"
+        if [ "$BUILD_STATUS" = "success" ]; then
+          TITLE="✅ <b>Success: $CIRCLE_JOB</b>"
+        else
+          TITLE="❌ <b>Failed: $CIRCLE_JOB</b>"
+        fi
         EXTRA=""
       fi
-
+ 
       MESSAGE="${TITLE}${NL}${NL}"
-      MESSAGE+="⚙️ <b>CI</b>  <code>$CI_SOURCE</code>${NL}"
       MESSAGE+="🌿 <b>Branch</b>  <code>${CIRCLE_BRANCH:-$CIRCLE_TAG}</code>"
       MESSAGE+="${EXTRA:+$EXTRA}"
       MESSAGE+="${NL}🔒 <b>Obfuscate</b>  <code>$OBFUSCATE</code>"
       MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
       MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
       MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
+      MESSAGE+="⚙️ <b>CI</b>  <code>$CI_SOURCE</code>${NL}"
       MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>${NL}"
       MESSAGE+="🕐 <b>Reported at</b>  <code>$TIMESTAMP</code>"
-
+ 
       # ใช้ jq build JSON เพื่อหลีกเลี่ยง quote และ special character ใน URL
       jq -n \
         --arg chat_id "$TELEGRAM_CHAT_ID" \
@@ -116,6 +137,8 @@ jobs:
       - store_test_results:
           path: test-results
 
+      - *set-success
+      - *set-failure
       - *notify-telegram
 
 workflows:
