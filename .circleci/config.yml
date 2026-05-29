@@ -96,6 +96,14 @@ jobs:
           command: |
             dotnet test --no-build --configuration Release \
               --logger "junit;LogFilePath=test-results/results.xml"
+      
+      - run:
+          name: Debug stamp file
+          command: |
+            echo "=== Searching for stamp file ==="
+            find . -name "obfuscate.stamp" 2>/dev/null || echo "NOT FOUND"
+            echo "=== MSBuild output dir ==="
+            find . -name "*.stamp" 2>/dev/null  
 
       - save_cache:
           paths:

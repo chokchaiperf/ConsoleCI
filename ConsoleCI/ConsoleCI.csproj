@@ -7,7 +7,7 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <Target Name="Obfuscate" AfterTargets="_LinkAssemblies" BeforeTargets="_BuildAppBundle">
+    <Target Name="Obfuscate" AfterTargets="Build">
 
     <WriteLinesToFile File="$(MSBuildProjectDirectory)/obfuscate.stamp" 
                     Lines="true" 
