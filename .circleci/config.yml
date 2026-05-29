@@ -54,7 +54,7 @@ notify-telegram: &notify-telegram
       MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
       MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
       MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
-      MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>"
+      MESSAGE+="🔗 <a href=\"$CIRCLE_BUILD_URL\">Build #$CIRCLE_BUILD_NUM</a>${NL}"
       MESSAGE+="🕐 <b>Reported at</b>  <code>$TIMESTAMP</code>"
 
       # ใช้ jq build JSON เพื่อหลีกเลี่ยง quote และ special character ใน URL

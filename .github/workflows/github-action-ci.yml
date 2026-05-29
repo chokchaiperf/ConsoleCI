@@ -103,7 +103,7 @@ jobs:
           MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
           MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
           MESSAGE+="👤 <b>Triggered by</b>  $GITHUB_ACTOR${NL}"
-          MESSAGE+="🔗 <a href=\"$BUILD_URL\">Run #$GITHUB_RUN_NUMBER</a>"
+          MESSAGE+="🔗 <a href=\"$BUILD_URL\">Run #$GITHUB_RUN_NUMBER</a>${NL}"
           MESSAGE+="🕐 <b>Reported at</b>  <code>$TIMESTAMP</code>"
 
           jq -n \
