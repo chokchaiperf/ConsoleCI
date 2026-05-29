@@ -61,9 +61,15 @@ jobs:
     steps:
       - checkout
  
+      - run:
+          name: Generate NuGet cache key
+          command: |
+            find . -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*" \
+              | sort | xargs cat > /tmp/nuget-cache-key.txt
+ 
       - restore_cache:
           keys:
-            - nuget-{{ checksum "**/*.csproj" }}
+            - nuget-{{ checksum "/tmp/nuget-cache-key.txt" }}
             - nuget-
  
       - run:
@@ -83,10 +89,12 @@ jobs:
       - save_cache:
           paths:
             - ~/.nuget/packages
-          key: nuget-{{ checksum "**/*.csproj" }}
+          key: nuget-{{ checksum "/tmp/nuget-cache-key.txt" }}
  
       - store_test_results:
           path: test-results
+ 
+      - *notify-telegram
 
 workflows:
   build_and_test:
