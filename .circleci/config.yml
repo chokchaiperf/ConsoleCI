@@ -8,14 +8,11 @@ notify-telegram: &notify-telegram
       SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
-      STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
-      if [ -f "$STAMP" ]; then
-        OBFUSCATE="true"
-      else
-        OBFUSCATE="false"
-      fi
  
-      # Parse tag
+      # Parse tag + ตรวจสอบ Obfuscate จาก SLOT_KEY
+      # $(Ring) ถูกกำหนดจาก tag เท่านั้น → rel-v* คือ Ring=rel → Obfuscate ทำงาน
+      OBFUSCATE="false"
+ 
       if [ -n "$CIRCLE_TAG" ]; then
         if [[ $CIRCLE_TAG =~ ^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$ ]]; then
           SLOT_KEY="${BASH_REMATCH[1]}"
@@ -24,12 +21,13 @@ notify-telegram: &notify-telegram
             sand)    SLOT_DISPLAY="Sandbox" ;;
             dev)     SLOT_DISPLAY="Development" ;;
             staging) SLOT_DISPLAY="Staging" ;;
+            rel)     SLOT_DISPLAY="Release" ; OBFUSCATE="true" ;;
             prod)    SLOT_DISPLAY="Production" ;;
             *)       SLOT_DISPLAY=$(echo $SLOT_KEY | tr '[:lower:]' '[:upper:]') ;;
           esac
         fi
         TITLE="🚀 <b>Release: $APP_VERSION</b>"
-        EXTRA="${NL}📦 <b>Release Slot</b>  <code>$SLOT_DISPLAY</code>${NL}🔐 <b>OBFUSCATED</b>  <code>$OBFUSCATE</code>${NL}🏷 <b>App Version</b>  <code>$APP_VERSION</code>"
+        EXTRA="${NL}📦 <b>Release Slot</b>  <code>$SLOT_DISPLAY</code>${NL}🏷 <b>App Version</b>  <code>$APP_VERSION</code>"
       else
         TITLE="✅ <b>Success: $CIRCLE_JOB</b>"
         EXTRA=""
@@ -38,6 +36,7 @@ notify-telegram: &notify-telegram
       MESSAGE="${TITLE}${NL}${NL}"
       MESSAGE+="🌿 <b>Branch</b>  <code>${CIRCLE_BRANCH:-$CIRCLE_TAG}</code>"
       MESSAGE+="${EXTRA:+$EXTRA}"
+      MESSAGE+="${NL}🔒 <b>Obfuscate</b>  <code>$OBFUSCATE</code>"
       MESSAGE+="${NL}📌 <b>Commit</b>${NL}"
       MESSAGE+="<code>$SHORT_SHA</code> $COMMIT_MSG${NL}${NL}"
       MESSAGE+="👤 <b>Triggered by</b>  $CIRCLE_USERNAME${NL}"
