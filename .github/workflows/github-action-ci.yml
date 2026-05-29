@@ -56,7 +56,7 @@ jobs:
           COMMIT_MSG=$(git log -1 --pretty=format:"%s")
           NL=$'\n'
           BUILD_URL="$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-          TIMESTAMP=$(date -u '+%d/%m/%Y %H:%M UTC')
+          TIMESTAMP=$(TZ='Asia/Bangkok' date '+%d/%m/%Y %H:%M ICT')
 
           STAMP=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
           if [ -f "$STAMP" ]; then

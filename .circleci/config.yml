@@ -8,7 +8,7 @@ notify-telegram: &notify-telegram
       SHORT_SHA=$(echo $CIRCLE_SHA1 | cut -c1-7)
       COMMIT_MSG=$(git log -1 --pretty=format:"%s")
       NL=$'\n'
-      TIMESTAMP=$(date -u '+%d/%m/%Y %H:%M UTC')
+      TIMESTAMP=$(TZ='Asia/Bangkok' date '+%d/%m/%Y %H:%M ICT')
 
       if [ "$CIRCLECI" = "true" ]; then
         CI_SOURCE="CircleCI"
