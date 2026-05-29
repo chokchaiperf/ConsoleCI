@@ -59,6 +59,10 @@ jobs:
  
     steps:
       - checkout
+
+      - run:
+          name: Install jq
+          command: apt-get update -qq && apt-get install -y -qq jq
  
       - run:
           name: Generate NuGet cache key
