@@ -124,7 +124,7 @@ _append_download_links() {
 
 # --- Build message ---
 build_message() {
-  local platform_suffix=""
+  local platform_suffix="Android/iOS"
   if [ -n "${PLATFORM:-}" ]; then
     platform_suffix=" ${PLATFORM}"
   fi
