@@ -37,7 +37,6 @@ normalize_ci_vars() {
     ACTOR="${CIRCLE_USERNAME}"
     BUILD_URL="${CIRCLE_BUILD_URL}"
     BUILD_NUMBER="${CIRCLE_BUILD_NUM}"
-    JOB_NAME="${CIRCLE_JOB}"
   elif [ "${GITHUB_ACTIONS:-}" = "true" ]; then
     CI_SOURCE="GitHub Actions"
     COMMIT_SHA="${GITHUB_SHA}"
@@ -46,7 +45,6 @@ normalize_ci_vars() {
     ACTOR="${GITHUB_ACTOR}"
     BUILD_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
     BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
-    JOB_NAME="${GITHUB_JOB}"
   else
     echo "ERROR: Unknown CI environment" >&2
     exit 1
@@ -144,7 +142,7 @@ build_message() {
 
     MESSAGE+="🔒 <b>Obfuscate</b>  <code>${OBFUSCATE}</code>${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
+    MESSAGE+="📌 <b>Commit</b>  <code>${SHORT_SHA}</code> ${COMMIT_MSG}${NL}"
 
     _append_download_links
   else
@@ -166,7 +164,7 @@ build_message() {
 
     MESSAGE+="🔒 <b>Obfuscate</b>  <code>${OBFUSCATE}</code>${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
+    MESSAGE+="📌 <b>Commit</b>  <code>${SHORT_SHA}</code> ${COMMIT_MSG}${NL}"
   fi
 
   # --- Meta footer ---
