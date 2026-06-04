@@ -94,14 +94,25 @@ parse_tag() {
   fi
 }
 
-# --- Append download links based on slot (tag builds only) ---
+# --- Append download links based on slot ---
+# rel/prod → Play Store + TestFlight
+# dev/sandbox/staging/non-tag → Firebase
 _append_download_links() {
-  # ไม่แสดง download links ถ้าไม่ใช่ tag build
-  [ "${IS_TAG}" = "true" ] || return 0
-
   case ${SLOT_KEY} in
-    sand|dev*|staging)
-      # Dev environments → Firebase
+    rel|prod)
+      # Production environments → Play Store + TestFlight
+      if [ -n "${PLAY_STORE_URL:-}" ]; then
+        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+      fi
+      if [ -n "${TESTFLIGHT_URL:-}" ]; then
+        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+      fi
+      if [ -n "${SETUP_URL:-}" ]; then
+        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
+      fi
+      ;;
+    *)
+      # Dev/Sandbox/Staging/non-tag → Firebase
       if [ -n "${FIREBASE_URL:-}" ]; then
         MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
@@ -114,18 +125,6 @@ _append_download_links() {
           url="${item#*=}"
           MESSAGE+="• <a href=\"${url}\">${label}</a>${NL}"
         done
-      fi
-      ;;
-    rel|prod)
-      # Production environments → Play Store + TestFlight
-      if [ -n "${PLAY_STORE_URL:-}" ]; then
-        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
-      fi
-      if [ -n "${TESTFLIGHT_URL:-}" ]; then
-        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
-      fi
-      if [ -n "${SETUP_URL:-}" ]; then
-        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
       fi
       ;;
   esac
