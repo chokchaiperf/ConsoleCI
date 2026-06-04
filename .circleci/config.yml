@@ -1,5 +1,11 @@
 version: 2.1
 
+# Force unique pipeline per tag by declaring tag as pipeline parameter
+parameters:
+  GIT_TAG:
+    type: string
+    default: ""
+
 jobs:
   build_test:
     docker:
@@ -65,11 +71,22 @@ jobs:
           command: BUILD_STATUS=failed bash scripts/notify-telegram.sh
 
 workflows:
-  build_and_test:
+  # Workflow สำหรับ branch push ปกติ
+  on_branch:
     jobs:
       - build_test:
           filters:
-            tags:
-              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/
             branches:
               only: /.*/
+            tags:
+              ignore: /.*/
+
+  # Workflow สำหรับ tag push เท่านั้น
+  on_tag:
+    jobs:
+      - build_test:
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/
