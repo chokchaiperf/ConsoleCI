@@ -3,18 +3,20 @@
 # Shared Telegram notification script — works with CircleCI and GitHub Actions
 #
 # Required env vars:
-#   TELEGRAM_BOT_TOKEN  — bot token
-#   TELEGRAM_CHAT_ID    — target chat/group ID
-#   BUILD_STATUS        — "success" | "failed"
+#   TELEGRAM_BOT_TOKEN      — bot token
+#   TELEGRAM_CHAT_ID        — target chat/group ID
+#   BUILD_STATUS            — "success" | "failed"
 #
 # Optional env vars:
-#   PLATFORM            — "iOS" | "Android" | "iOS & Android"
-#   APP_NAME            — app display name (shown on failed builds)
-#   FAILED_STEP         — step name that caused failure
-#   FIREBASE_URL        — Firebase App Distribution URL
-#   PLAY_STORE_URL      — Google Play Store URL
-#   TESTFLIGHT_URL      — TestFlight URL
-#   SETUP_URL           — setup instruction URL
+#   PLATFORM                — "iOS" | "Android" | "iOS or Android"
+#   APP_NAME                — app display name (shown on failed builds)
+#   FAILED_STEP             — step name that caused failure
+#   FIREBASE_URL            — Firebase App Distribution URL
+#   FIREBASE_SETUP_URLS     — pipe-separated setup links: "label=url|label=url"
+#                             e.g. "iOS=https://...|Android=https://..."
+#   PLAY_STORE_URL          — Google Play Store URL
+#   TESTFLIGHT_URL          — TestFlight URL
+#   SETUP_URL               — prod setup instruction URL
 
 set -euo pipefail
 
@@ -30,19 +32,13 @@ RETRY_DELAY=5
 # --- Normalize CI-specific variables ---
 normalize_ci_vars() {
   if [ "${CIRCLECI:-}" = "true" ]; then
-    CI_SOURCE="CircleCI"
-    COMMIT_SHA="${CIRCLE_SHA1}"
     REF_NAME="${CIRCLE_TAG:-$CIRCLE_BRANCH}"
     TAG_NAME="${CIRCLE_TAG:-}"
-    ACTOR="${CIRCLE_USERNAME}"
     BUILD_URL="${CIRCLE_BUILD_URL}"
     BUILD_NUMBER="${CIRCLE_BUILD_NUM}"
   elif [ "${GITHUB_ACTIONS:-}" = "true" ]; then
-    CI_SOURCE="GitHub Actions"
-    COMMIT_SHA="${GITHUB_SHA}"
     REF_NAME="${GITHUB_REF_NAME}"
     TAG_NAME=$([ "${GITHUB_REF_TYPE}" = "tag" ] && echo "${GITHUB_REF_NAME}" || echo "")
-    ACTOR="${GITHUB_ACTOR}"
     BUILD_URL="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
     BUILD_NUMBER="${GITHUB_RUN_NUMBER}"
   else
@@ -56,10 +52,8 @@ normalize_ci_vars() {
     IS_TAG="false"
   fi
 
-  SHORT_SHA=$(echo "${COMMIT_SHA}" | cut -c1-7)
   COMMIT_MSG=$(git log -1 --pretty=format:"%s")
   NL=$'\n'
-  TIMESTAMP=$(TZ='Asia/Bangkok' date '+%d/%m/%Y %H:%M ICT')
 }
 
 # --- Check Obfuscate stamp file ---
@@ -103,28 +97,40 @@ parse_tag() {
 
 # --- Append download links (success only) ---
 _append_download_links() {
-  # Firebase — dev/sandbox environments
+  # Firebase distribution link
   if [ -n "${FIREBASE_URL:-}" ]; then
-    MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase App Distribution</a>${NL}"
+    MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
   fi
 
-  # Google Play + TestFlight — prod/rel environments
+  # Firebase setup instruction — bullet list from pipe-separated "label=url" pairs
+  if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
+    MESSAGE+="<b>Firebase setup instruction</b>${NL}"
+    local item label url
+    local IFS='|'
+    for item in ${FIREBASE_SETUP_URLS}; do
+      label="${item%%=*}"
+      url="${item#*=}"
+      MESSAGE+="• <a href=\"${url}\">${label}</a>${NL}"
+    done
+  fi
+
+  # Google Play + TestFlight
   if [ -n "${PLAY_STORE_URL:-}" ]; then
-    MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google Play (Internal Beta)</a>${NL}"
+    MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
   fi
   if [ -n "${TESTFLIGHT_URL:-}" ]; then
-    MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">TestFlight</a>${NL}"
+    MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
   fi
 
-  # Setup instructions
+  # Prod setup instruction
   if [ -n "${SETUP_URL:-}" ]; then
-    MESSAGE+="<b>Setup instruction</b>  <a href=\"${SETUP_URL}\">Link</a>${NL}"
+    MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
   fi
 }
 
 # --- Build message ---
 build_message() {
-  local platform_suffix="Android/iOS"
+  local platform_suffix=""
   if [ -n "${PLATFORM:-}" ]; then
     platform_suffix=" ${PLATFORM}"
   fi
@@ -133,43 +139,36 @@ build_message() {
     # --- Success ---
     MESSAGE="✅${platform_suffix}${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
-    MESSAGE+="⏳ <b>Version</b>  <code>${APP_VERSION}</code>${NL}"
-    MESSAGE+="🌿 <b>Branch</b>  <code>${REF_NAME}</code>${NL}"
+    MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
+    MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
     if [ -n "${SLOT_DISPLAY}" ]; then
-      MESSAGE+="<b>Ring</b>  <code>${SLOT_DISPLAY}</code>${NL}"
+      MESSAGE+="<b>Ring</b>  ${SLOT_DISPLAY}${NL}"
     fi
 
-    MESSAGE+="🔒 <b>Obfuscate</b>  <code>${OBFUSCATE}</code>${NL}"
+    MESSAGE+="🔒 <b>Obfuscate</b>  ${OBFUSCATE}${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  <code>${SHORT_SHA}</code> ${COMMIT_MSG}${NL}"
+    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
 
     _append_download_links
+
   else
     # --- Failed ---
     MESSAGE="❌${platform_suffix}${NL}"
-
-    if [ -n "${FAILED_STEP:-}" ]; then
-      MESSAGE+="<b>Error message</b>  ${FAILED_STEP}${NL}"
-    fi
-
+    MESSAGE+="<b>Error message</b>  ${FAILED_STEP:-}${NL}"
     MESSAGE+="${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
-    MESSAGE+="⏳ <b>Version</b>  <code>${APP_VERSION}</code>${NL}"
-    MESSAGE+="🌿 <b>Branch</b>  <code>${REF_NAME}</code>${NL}"
+    MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
+    MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
     if [ -n "${APP_NAME:-}" ]; then
       MESSAGE+="<b>App name</b>  ${APP_NAME}${NL}"
     fi
 
-    MESSAGE+="🔒 <b>Obfuscate</b>  <code>${OBFUSCATE}</code>${NL}"
+    MESSAGE+="🔒 <b>Obfuscate</b>  ${OBFUSCATE}${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  <code>${SHORT_SHA}</code> ${COMMIT_MSG}${NL}"
+    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
   fi
-
-  # --- Meta footer ---
-  MESSAGE+="${NL}👤 <b>Triggered by</b>  ${ACTOR}  ⚙️ <code>${CI_SOURCE}</code>${NL}"
-  MESSAGE+="🕐 <code>${TIMESTAMP}</code>"
 }
 
 # --- Send to Telegram with retry ---
