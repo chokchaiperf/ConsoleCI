@@ -94,37 +94,41 @@ parse_tag() {
   fi
 }
 
-# --- Append download links (success only) ---
+# --- Append download links based on slot (tag builds only) ---
 _append_download_links() {
-  # Firebase distribution link
-  if [ -n "${FIREBASE_URL:-}" ]; then
-    MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
-  fi
+  # ไม่แสดง download links ถ้าไม่ใช่ tag build
+  [ "${IS_TAG}" = "true" ] || return 0
 
-  # Firebase setup instruction — bullet list from pipe-separated "label=url" pairs
-  if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
-    MESSAGE+="<b>Firebase setup instruction</b>${NL}"
-    local item label url
-    local IFS='|'
-    for item in ${FIREBASE_SETUP_URLS}; do
-      label="${item%%=*}"
-      url="${item#*=}"
-      MESSAGE+="• <a href=\"${url}\">${label}</a>${NL}"
-    done
-  fi
-
-  # Google Play + TestFlight
-  if [ -n "${PLAY_STORE_URL:-}" ]; then
-    MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
-  fi
-  if [ -n "${TESTFLIGHT_URL:-}" ]; then
-    MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
-  fi
-
-  # Prod setup instruction
-  if [ -n "${SETUP_URL:-}" ]; then
-    MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
-  fi
+  case ${SLOT_KEY} in
+    sand|dev*|staging)
+      # Dev environments → Firebase
+      if [ -n "${FIREBASE_URL:-}" ]; then
+        MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
+      fi
+      if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
+        MESSAGE+="<b>Firebase setup instruction</b>${NL}"
+        local item label url
+        local IFS='|'
+        for item in ${FIREBASE_SETUP_URLS}; do
+          label="${item%%=*}"
+          url="${item#*=}"
+          MESSAGE+="• <a href=\"${url}\">${label}</a>${NL}"
+        done
+      fi
+      ;;
+    rel|prod)
+      # Production environments → Play Store + TestFlight
+      if [ -n "${PLAY_STORE_URL:-}" ]; then
+        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+      fi
+      if [ -n "${TESTFLIGHT_URL:-}" ]; then
+        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+      fi
+      if [ -n "${SETUP_URL:-}" ]; then
+        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
+      fi
+      ;;
+  esac
 }
 
 # --- Build message ---

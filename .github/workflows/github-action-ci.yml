@@ -56,3 +56,8 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           BUILD_STATUS: ${{ job.status }}
+          FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
+          FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
+          PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
+          TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
+          SETUP_URL: "https://mock.example.com/setup"

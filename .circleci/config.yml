@@ -50,7 +50,14 @@ jobs:
       - run:
           name: Notify Telegram (success)
           when: on_success
-          command: BUILD_STATUS=success bash scripts/notify-telegram.sh
+          command: |
+            BUILD_STATUS=success \
+            FIREBASE_URL="https://appdistribution.firebase.google.com/mock" \
+            FIREBASE_SETUP_URLS="iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web" \
+            PLAY_STORE_URL="https://play.google.com/store/apps/details?id=com.example.mock" \
+            TESTFLIGHT_URL="https://testflight.apple.com/join/mocktoken" \
+            SETUP_URL="https://mock.example.com/setup" \
+            bash scripts/notify-telegram.sh
 
       - run:
           name: Notify Telegram (failure)
