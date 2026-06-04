@@ -28,16 +28,12 @@ jobs:
             - nuget-
 
       - run:
-          name: Clean stamp file
-          command: find . -name "obfuscate.stamp" -delete || true
-
-      - run:
           name: Restore dependencies
           command: dotnet restore
 
       - run:
           name: Build
-          command: dotnet build --no-restore --configuration Release
+          command: dotnet build --no-restore --configuration Release -p:MockObfuscate=true 2>&1 | tee build.log
 
       - run:
           name: Run tests

@@ -7,17 +7,30 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
-    <Target Name="Obfuscate" AfterTargets="Build">
-
-    <!-- <WriteLinesToFile File="$(MSBuildProjectDirectory)/obfuscate.stamp" 
-                    Lines="true" 
-                    Overwrite="true" />
-    <Message Importance="High" Text="Obfuscate process completed." /> -->
-
-    <!-- TODO: Obfuscate process -->
+    <!-- Real obfuscation target — จะถูกแทนที่ด้วย .NET Reactor command จริงๆ -->
+    <Target Name="Obfuscate" AfterTargets="Build" Condition="'$(Ring)' == 'rel'">
+        <!-- TODO: .NET Reactor process -->
     </Target>
 
-    <!-- <Target Name="ForceFailure" AfterTargets="Build">
+    <!-- Mock obfuscation target — ใช้ทดสอบ log detection ด้วย -p:MockObfuscate=true -->
+    <Target Name="MockObfuscate" AfterTargets="Build" Condition="'$(MockObfuscate)' == 'true'">
+        <Message Importance="High" Text=".NET Reactor – Analyzing Assemblies ..." />
+        <Message Importance="High" Text="" />
+        <Message Importance="High" Text=".NET Reactor – Protecting $(AssemblyName) ..." />
+        <Message Importance="High" Text="---- $(AssemblyName) ----" />
+        <Message Importance="High" Text="Examining Code...Done" />
+        <Message Importance="High" Text="Obfuscation (Naming Convention -&gt; Stealth)...Done" />
+        <Message Importance="High" Text="Compress and Encrypt Resources...Done" />
+        <Message Importance="High" Text="Anti Debugging...Done" />
+        <Message Importance="High" Text="String Encryption...Done" />
+        <Message Importance="High" Text="Final Steps..." />
+        <Message Importance="High" Text="Done" />
+        <Message Importance="High" Text="" />
+        <Message Importance="High" Text="$(AssemblyName) – Successfully Protected!" />
+    </Target>
+
+    <!-- Force failure target — ใช้ทดสอบ failed notification ด้วย -p:ForceFail=true -->
+    <!-- <Target Name="ForceFailure" AfterTargets="Build" Condition="'$(ForceFail)' == 'true'">
         <Error Text="Forced failure for testing notification" />
     </Target> -->
 

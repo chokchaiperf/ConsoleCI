@@ -56,11 +56,10 @@ normalize_ci_vars() {
   NL=$'\n'
 }
 
-# --- Check Obfuscate stamp file ---
+# --- Check Obfuscate from build log ---
+# ตรวจหา "Successfully Protected!" จาก .NET Reactor output ใน build.log
 check_obfuscate() {
-  local stamp
-  stamp=$(find . -name "obfuscate.stamp" -not -path "*/obj/*" | head -1)
-  if [ -f "${stamp}" ]; then
+  if [ -f "build.log" ] && grep -q "Successfully Protected!" build.log; then
     OBFUSCATE="true"
   else
     OBFUSCATE="false"

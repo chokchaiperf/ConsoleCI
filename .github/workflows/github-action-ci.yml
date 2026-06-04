@@ -31,14 +31,11 @@ jobs:
           restore-keys: |
             nuget-${{ runner.os }}-
 
-      - name: Clean stamp file
-        run: find . -name "obfuscate.stamp" -delete || true
-
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build --no-restore --configuration Release -p:MockObfuscate=true 2>&1 | tee build.log
 
       - name: Run tests
         run: |
