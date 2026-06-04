@@ -42,7 +42,6 @@ jobs:
 
       - name: Run tests
         run: |
-          # TODO: ระบุ test project path ถ้ามีหลาย project เช่น dotnet test MyApp.Tests/
           dotnet test --no-build --configuration Release \
             --logger "junit;LogFilePath=test-results/results.xml"
 

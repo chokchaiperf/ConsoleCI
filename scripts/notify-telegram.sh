@@ -1,11 +1,4 @@
 #!/bin/bash
-# scripts/notify-telegram.sh
-# Shared Telegram notification script — works with CircleCI and GitHub Actions
-#
-# Required env vars:
-#   TELEGRAM_BOT_TOKEN  — bot token
-#   TELEGRAM_CHAT_ID    — target chat/group ID
-#   BUILD_STATUS        — "success" | "failed"
 
 set -euo pipefail
 
