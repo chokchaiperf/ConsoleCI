@@ -89,4 +89,4 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+-\d{6}$/
+              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+\.\d{6}$/

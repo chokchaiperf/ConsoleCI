@@ -20,7 +20,7 @@
 
 set -euo pipefail
 
-TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$'
+TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]{6})$'
 MAX_RETRIES=3
 RETRY_DELAY=5
 
