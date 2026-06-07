@@ -77,8 +77,11 @@ jobs:
           command: BUILD_STATUS=failed bash scripts/notify-telegram.sh
 
 workflows:
-  # Workflow สำหรับ branch push ปกติ
-  on_branch:
+  # "dev" — รับเฉพาะ branch push / PR เท่านั้น ไม่ยุ่งกับ tag เลย
+  # (ตั้งชื่อ/แยกให้ตรงกับแนวคิดเดียวกับฝั่ง GitHub Actions ที่แยกเป็น dev-ci.yml /
+  # release-ci.yml คนละไฟล์ — มองเป็นคนละ "pipeline" กันไปเลยเพื่อให้จัดการง่ายขึ้น
+  # และตัดปัญหา push-then-tag ที่ trigger ชนกันให้หมดไป)
+  dev:
     jobs:
       - build_test:
           filters:
@@ -87,12 +90,18 @@ workflows:
             tags:
               ignore: /.*/
 
-  # Workflow สำหรับ tag push เท่านั้น
-  on_tag:
+  # "release" — รับเฉพาะ tag push ที่ตรงกับ slot ที่กำหนดไว้เท่านั้น:
+  #   rel  = Release
+  #   stg  = Staging
+  #   sand = Sandbox
+  # จำกัด prefix ไว้ตรง ๆ ใน regex (แทน `[a-zA-Z]+` แบบเดิมที่ match ทุก prefix)
+  # เพื่อไม่ให้ tag อื่น ๆ ที่ไม่ได้ตั้งใจ deploy จริง (เช่น dev*, prod, tag พิมพ์ผิด)
+  # ทำให้ release pipeline รันโดยไม่ตั้งใจ
+  release:
     jobs:
       - build_test:
           filters:
             branches:
               ignore: /.*/
             tags:
-              only: /^[a-zA-Z]+-v\d+\.\d+\.\d+\.\d{6}$/
+              only: /^(rel|stg|sand)-v\d+\.\d+\.\d+\.\d{6}$/

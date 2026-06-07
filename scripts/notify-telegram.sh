@@ -140,7 +140,7 @@ parse_tag() {
       sand)    SLOT_DISPLAY="Sandbox" ;;
       dev)     SLOT_DISPLAY="Development" ;;
       dev*)    SLOT_DISPLAY="Dev-${SLOT_KEY#dev}" ;;
-      staging) SLOT_DISPLAY="Staging" ;;
+      stg)     SLOT_DISPLAY="Staging" ;;
       rel)     SLOT_DISPLAY="Release" ;;
       prod)    SLOT_DISPLAY="Production" ;;
       *)       SLOT_DISPLAY=$(echo "${SLOT_KEY}" | tr '[:lower:]' '[:upper:]') ;;
@@ -152,26 +152,28 @@ parse_tag() {
 # rel/prod → Play Store + TestFlight
 # dev/sandbox/staging/non-tag → Firebase
 _append_download_links() {
+  # icon ในส่วนนี้ใช้แยก "แพลตฟอร์ม/ประเภทลิงก์" เพื่อช่วย scan/tap บนมือถือเร็วขึ้น
+  # — ตรงนี้คือส่วน call-to-action หลักของข้อความ success จึงคุ้มที่จะใส่
   case ${SLOT_KEY} in
     rel|prod)
       # Production environments → Play Store + TestFlight
       if [ -n "${PLAY_STORE_URL:-}" ]; then
-        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+        MESSAGE+="${NL}🤖 <b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
       fi
       if [ -n "${TESTFLIGHT_URL:-}" ]; then
-        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+        MESSAGE+="🍎 <b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
       fi
       if [ -n "${SETUP_URL:-}" ]; then
-        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
+        MESSAGE+="⚙️ <b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
       fi
       ;;
     *)
       # Dev/Sandbox/Staging/non-tag → Firebase
       if [ -n "${FIREBASE_URL:-}" ]; then
-        MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
+        MESSAGE+="${NL}🔥 <b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
       if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
-        MESSAGE+="<b>Firebase setup instruction</b>${NL}"
+        MESSAGE+="⚙️ <b>Firebase setup instruction</b>${NL}"
         local item label url
         local IFS='|'
         for item in ${FIREBASE_SETUP_URLS}; do
@@ -193,9 +195,12 @@ build_message() {
 
   if [ "${BUILD_STATUS}" = "success" ]; then
     # --- Success ---
+    # icon scheme: เก็บไว้เฉพาะ field ที่ "ใช้ตัดสินใจ/นำทาง" ได้จริง (ลิงก์, environment,
+    # security check) ส่วน field ที่เป็นข้อมูลอ้างอิงประจำ (App name, Tags, Commit)
+    # ตั้งใจไม่ใส่ icon — ถ้าใส่ทุกบรรทัดเท่ากันหมด จะไม่มีอะไรเด่นจริง
     MESSAGE="✅${platform_suffix}${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
-    MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
+    MESSAGE+="🔢 <b>Version</b>  ${APP_VERSION}${NL}"
     MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
     if [ -n "${APP_NAME:-}" ]; then
@@ -203,22 +208,25 @@ build_message() {
     fi
 
     if [ -n "${SLOT_DISPLAY}" ]; then
-      MESSAGE+="<b>Ring</b>  ${SLOT_DISPLAY}${NL}"
+      # 🎯 เน้นเป็นพิเศษ — บอกว่า build นี้จะไป environment ไหน (dev/staging/release/prod)
+      # เป็นข้อมูลที่ผู้รับ notification ใช้ตัดสินใจขั้นต่อไปจริงๆ
+      MESSAGE+="🎯 <b>Ring</b>  ${SLOT_DISPLAY}${NL}"
     fi
 
     MESSAGE+="🔒 <b>Obfuscate</b>  ${OBFUSCATE}${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
+    MESSAGE+="<b>Commit</b>  ${COMMIT_MSG}${NL}"
 
     _append_download_links
 
   else
     # --- Failed ---
     MESSAGE="❌${platform_suffix}${NL}"
-    MESSAGE+="<b>Error message</b>  ${FAILED_STEP:-}${NL}"
+    # ⚠️ ข้อมูลที่ actionable ที่สุดในข้อความ failed — ต้องดึงสายตาก่อนสิ่งอื่นทั้งหมด
+    MESSAGE+="⚠️ <b>Error message</b>  ${FAILED_STEP:-}${NL}"
     MESSAGE+="${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
-    MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
+    MESSAGE+="🔢 <b>Version</b>  ${APP_VERSION}${NL}"
     MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
     if [ -n "${APP_NAME:-}" ]; then
@@ -227,7 +235,7 @@ build_message() {
 
     MESSAGE+="🔒 <b>Obfuscate</b>  ${OBFUSCATE}${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
+    MESSAGE+="<b>Commit</b>  ${COMMIT_MSG}${NL}"
   fi
 }
 

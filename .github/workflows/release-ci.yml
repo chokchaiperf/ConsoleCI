@@ -1,14 +1,25 @@
-name: .NET Console App CI
+name: "Release CI (tags: rel / stg / sand)"
 
+# Workflow อิสระสำหรับ "release" — trigger เฉพาะตอน push tag ที่ตรงกับ slot
+# ที่กำหนดไว้เท่านั้น: rel (Release) / stg (Staging) / sand (Sandbox)
+# รูปแบบ tag: <slot>-vMAJOR.MINOR.BUILD.YYMMDD เช่น rel-v1.2.3.260608
+#
+# เหตุผลที่แยกเป็นไฟล์ของตัวเอง (แทนที่จะรวมกับ branch push ในไฟล์เดียว):
+# - ใน GitHub Actions แต่ละ workflow file ถูกประเมิน trigger แยกจากกันโดยอิสระ
+#   ทำให้ tag push ที่ตามหลัง branch push ติดๆ ไม่มีทางถูก trigger ผิดเงื่อนไข
+#   หรือถูกบดบังโดย logic ของอีก trigger หนึ่งอีกต่อไป (ปัญหาที่เคยเจอ)
+# - การระบุ pattern ตรง ๆ ทีละ slot (แทน wildcard `[a-zA-Z]*-v...`) ทำให้ workflow นี้
+#   trigger เฉพาะ tag ที่ตั้งใจ deploy จริง ๆ เท่านั้น — tag อื่น ๆ (เช่น dev*, prod
+#   หรือ tag ทดลองที่สะกดผิด) จะไม่ทำให้ release pipeline รันโดยไม่ตั้งใจ
 on:
   push:
-    branches: ['**']
     tags:
-      - '[a-zA-Z]*-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
-  pull_request:
+      - 'rel-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'stg-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'sand-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
 
 concurrency:
-  group: ${{ github.ref }}
+  group: release-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -69,4 +80,4 @@ jobs:
           FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
           PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
           TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
-          SETUP_URL: "https://mock.example.com/setup" 
+          SETUP_URL: "https://mock.example.com/setup"

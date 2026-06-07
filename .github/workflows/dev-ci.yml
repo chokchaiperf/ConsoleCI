@@ -1,0 +1,79 @@
+name: Dev CI (push & PR)
+
+# แยกออกมาเป็น workflow อิสระสำหรับ "dev" — รับเฉพาะ push เข้า branch และ PR เท่านั้น
+# ตั้งใจไม่ใส่ `tags:` ใน push trigger เลย เพราะ GitHub Actions จะ match เฉพาะ
+# branch ref กับ filter `branches:` — push ที่เป็น tag ref จะไม่ trigger workflow นี้
+# (ตรงข้ามกับ release-ci.yml ที่ trigger เฉพาะ tag เท่านั้น)
+#
+# เหตุผลที่แยกจาก release-ci.yml: เดิมไฟล์เดียวรับทั้ง branch push และ tag push
+# พบปัญหาว่าถ้า push ขึ้นแล้ว tag ตามมาติดๆ บางครั้ง tag push ไม่ trigger ตามที่ควร
+# การแยกเป็นคนละ workflow file ทำให้ GitHub ประเมิน trigger ของแต่ละ workflow
+# อย่างเป็นอิสระต่อกันโดยสมบูรณ์ — ไม่มี logic ร่วมที่อาจชนกันอีกต่อไป
+on:
+  push:
+    branches: ['**']
+  pull_request:
+
+concurrency:
+  group: dev-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build_test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Lint shell scripts
+        run: shellcheck scripts/notify-telegram.sh
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
+          restore-keys: |
+            nuget-${{ runner.os }}-
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Build
+        # หมายเหตุ: ต้องประกาศ `set -eo pipefail` เอง — ห้ามพึ่ง default shell behavior
+        # เพราะ runner ของ GitHub Actions ไม่ได้เปิด pipefail ให้จริงเสมอไป (ต่างจาก CircleCI
+        # ที่เปิด `set -eo pipefail` เป็นค่า default ของ `run` step) ทำให้ exit code ของ
+        # `dotnet build` ที่ fail ถูก `tee` กลบจนเหลือ exit 0 และ step ขึ้นเขียวทั้งที่ build พัง
+        run: |
+          set -eo pipefail
+          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=false 2>&1 | tee build.log
+
+      - name: Run tests
+        run: |
+          dotnet test --no-build --configuration Release \
+            --logger "junit;LogFilePath=test-results/results.xml"
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results/
+
+      - name: Notify Telegram
+        if: always()
+        run: bash scripts/notify-telegram.sh
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          BUILD_STATUS: ${{ job.status }}
+          FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
+          FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
+          PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
+          TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
+          SETUP_URL: "https://mock.example.com/setup"
