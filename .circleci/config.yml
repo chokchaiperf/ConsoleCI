@@ -97,6 +97,9 @@ workflows:
   # จำกัด prefix ไว้ตรง ๆ ใน regex (แทน `[a-zA-Z]+` แบบเดิมที่ match ทุก prefix)
   # เพื่อไม่ให้ tag อื่น ๆ ที่ไม่ได้ตั้งใจ deploy จริง (เช่น dev*, prod, tag พิมพ์ผิด)
   # ทำให้ release pipeline รันโดยไม่ตั้งใจ
+  #
+  # รูปแบบ tag: SLOT-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่ — เช่น
+  # rel-v1.1.2562-260525) — ตรงกับที่ TAG_REGEX ใน notify-telegram.sh ใช้ parse
   release:
     jobs:
       - build_test:
@@ -104,4 +107,4 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^(rel|stg|sand)-v\d+\.\d+\.\d+\.\d{6}$/
+              only: /^(rel|stg|sand)-v\d+\.\d+\.\d+-\d{6}$/

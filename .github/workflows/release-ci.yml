@@ -2,7 +2,8 @@ name: "Release CI (tags: rel / stg / sand)"
 
 # Workflow อิสระสำหรับ "release" — trigger เฉพาะตอน push tag ที่ตรงกับ slot
 # ที่กำหนดไว้เท่านั้น: rel (Release) / stg (Staging) / sand (Sandbox)
-# รูปแบบ tag: <slot>-vMAJOR.MINOR.BUILD.YYMMDD เช่น rel-v1.2.3.260608
+# รูปแบบ tag: <slot>-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่)
+# เช่น rel-v1.1.2562-260525 — ตรงกับ TAG_REGEX ใน notify-telegram.sh
 #
 # เหตุผลที่แยกเป็นไฟล์ของตัวเอง (แทนที่จะรวมกับ branch push ในไฟล์เดียว):
 # - ใน GitHub Actions แต่ละ workflow file ถูกประเมิน trigger แยกจากกันโดยอิสระ
@@ -14,9 +15,9 @@ name: "Release CI (tags: rel / stg / sand)"
 on:
   push:
     tags:
-      - 'rel-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
-      - 'stg-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
-      - 'sand-v[0-9]*.[0-9]*.[0-9]*.[0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'rel-v[0-9]*.[0-9]*.[0-9]*-[0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'stg-v[0-9]*.[0-9]*.[0-9]*-[0-9][0-9][0-9][0-9][0-9][0-9]'
+      - 'sand-v[0-9]*.[0-9]*.[0-9]*-[0-9][0-9][0-9][0-9][0-9][0-9]'
 
 concurrency:
   group: release-${{ github.ref }}

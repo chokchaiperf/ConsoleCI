@@ -29,7 +29,9 @@
 
 set -euo pipefail
 
-TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)\.([0-9]{6})$'
+# รูปแบบ tag: SLOT-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่ — เช่น
+# rel-v1.1.2562-260525) ให้ตรงกับ tag filter pattern ของทั้ง CircleCI/GitHub Actions
+TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$'
 MAX_RETRIES=3
 RETRY_DELAY=5
 
