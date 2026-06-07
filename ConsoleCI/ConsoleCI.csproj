@@ -5,6 +5,17 @@
         <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+
+        <!--
+          App identity property — ตั้งชื่อตาม convention เดียวกับ .NET MAUI project
+          (ApplicationTitle) แม้ Console app จะไม่ได้ใช้ค่านี้จริงๆ ก็ตาม เหตุผลคือ
+          มันเป็น static MSBuild property ธรรมดา ที่ notify-telegram.sh อ่านค่าตรงๆ
+          ผ่าน `dotnet build -getProperty:ApplicationTitle` (ดู check_app_name ใน
+          script) — ไม่ต้องมี target พิเศษใดๆ มาช่วยพ่นค่าออก log เลย และเมื่อ migrate
+          เข้า MAUI project จริงที่มี ApplicationTitle อยู่แล้วโดย default ก็จะอ่านค่า
+          ได้ทันทีโดยไม่ต้องแก้ script/CI แม้แต่บรรทัดเดียว
+        -->
+        <ApplicationTitle>ConsoleCI Demo</ApplicationTitle>
     </PropertyGroup>
 
     <!-- Real obfuscation target — จะถูกแทนที่ด้วย .NET Reactor command จริงๆ -->

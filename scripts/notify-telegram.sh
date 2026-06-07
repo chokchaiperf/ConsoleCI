@@ -9,7 +9,16 @@
 #
 # Optional env vars:
 #   PLATFORM                — "iOS" | "Android" | "iOS or Android"
-#   APP_NAME                — app display name (shown on failed builds)
+#   APP_NAME                — app display name. ถ้าไม่ส่งมาจาก CI จะอ่านค่า property
+#                             $(ApplicationTitle) ตรงจาก .csproj ให้อัตโนมัติด้วย
+#                             `dotnet build -getProperty` (ไม่ผ่าน build log ใดๆ —
+#                             ตั้งชื่อ property ให้ตรงกับ .NET MAUI ไว้ เพื่อให้
+#                             migrate เข้า MAUI project จริงได้โดยไม่ต้องแก้ pipeline)
+#   PROJECT_PATH            — path ไปยัง .csproj ที่จะอ่าน ApplicationTitle
+#                             (ถ้าไม่ระบุ จะหาไฟล์ .csproj ตัวแรกในรีโปให้)
+#   TARGET_FRAMEWORK        — TFM ที่ต้องการ evaluate เช่น "net9.0-android"
+#                             (จำเป็นสำหรับ multi-target project อย่าง MAUI ที่มี
+#                             หลาย TFM พร้อมกัน — ไม่งั้น evaluation จะกำกวม)
 #   FAILED_STEP             — step name that caused failure
 #   FIREBASE_URL            — Firebase App Distribution URL
 #   FIREBASE_SETUP_URLS     — pipe-separated setup links: "label=url|label=url"
@@ -63,6 +72,51 @@ check_obfuscate() {
     OBFUSCATE="true"
   else
     OBFUSCATE="false"
+  fi
+}
+
+# --- Resolve app name directly from the .csproj (no log parsing at all) ---
+# ApplicationTitle เป็น static project metadata — รู้ค่าได้จากการ "evaluate" project
+# เฉยๆ โดยไม่ต้องรอให้ build รันจบ ต่างจาก Obfuscate ที่เป็น runtime build outcome
+# (รู้ผลได้ก็ต่อเมื่อ build จบแล้วเท่านั้น จึงยังต้อง grep จาก build.log อยู่)
+#
+# ใช้ `dotnet build -getProperty:<PropertyName>` (MSBuild 17.8 / .NET SDK 8.0.300+)
+# ซึ่งเมื่อขอ property เดียว จะคืนค่าเป็น plain text ตรงๆ ใช้ใน script ได้ทันที —
+# นี่คือวิธีเดียวกับที่จะใช้ตอน migrate เข้า MAUI project จริง (ที่มี ApplicationTitle
+# อยู่แล้วโดย default) จึงไม่ต้องแก้ logic ส่วนนี้เลยตอน migrate
+check_app_name() {
+  if [ -n "${APP_NAME:-}" ]; then
+    return
+  fi
+
+  if ! command -v dotnet > /dev/null 2>&1; then
+    APP_NAME=""
+    return
+  fi
+
+  local project_path="${PROJECT_PATH:-}"
+  if [ -z "${project_path}" ]; then
+    project_path=$(find . -maxdepth 4 -name "*.csproj" -not -path "*/obj/*" -not -path "*/bin/*" 2>/dev/null | head -n1)
+  fi
+
+  if [ -z "${project_path}" ]; then
+    echo "WARN: no .csproj found to resolve ApplicationTitle (set PROJECT_PATH to override)" >&2
+    APP_NAME=""
+    return
+  fi
+
+  # -getProperty ต้องมีอย่างน้อย 1 element เสมอ (กัน "unbound variable" ตอน
+  # expand array ว่างภายใต้ set -u บน bash รุ่นเก่า)
+  local get_prop_args=(-getProperty:ApplicationTitle)
+  if [ -n "${TARGET_FRAMEWORK:-}" ]; then
+    get_prop_args+=(-p:TargetFramework="${TARGET_FRAMEWORK}")
+  fi
+
+  APP_NAME=$(dotnet build "${project_path}" "${get_prop_args[@]}" 2>/dev/null | tr -d '\r') || true
+  APP_NAME="${APP_NAME:-}"
+
+  if [ -z "${APP_NAME}" ]; then
+    echo "WARN: ApplicationTitle is empty/unresolved from ${project_path} (multi-target project? try setting TARGET_FRAMEWORK)" >&2
   fi
 }
 
@@ -144,6 +198,10 @@ build_message() {
     MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
     MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
+    if [ -n "${APP_NAME:-}" ]; then
+      MESSAGE+="<b>App name</b>  ${APP_NAME}${NL}"
+    fi
+
     if [ -n "${SLOT_DISPLAY}" ]; then
       MESSAGE+="<b>Ring</b>  ${SLOT_DISPLAY}${NL}"
     fi
@@ -213,6 +271,7 @@ send_notification() {
 # --- Main ---
 normalize_ci_vars
 check_obfuscate
+check_app_name
 check_branch_tags
 parse_tag
 build_message

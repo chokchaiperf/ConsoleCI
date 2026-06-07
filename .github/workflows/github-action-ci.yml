@@ -45,7 +45,7 @@ jobs:
         # `dotnet build` ที่ fail ถูก `tee` กลบจนเหลือ exit 0 และ step ขึ้นเขียวทั้งที่ build พัง
         run: |
           set -eo pipefail
-          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
+          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=false 2>&1 | tee build.log
 
       - name: Run tests
         run: |
@@ -69,4 +69,4 @@ jobs:
           FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
           PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
           TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
-          SETUP_URL: "https://mock.example.com/setup"
+          SETUP_URL: "https://mock.example.com/setup" 
