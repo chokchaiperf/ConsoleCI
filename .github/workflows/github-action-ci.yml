@@ -39,7 +39,7 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release -p:MockObfuscate=true 2>&1 | tee build.log
+        run: dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
 
       - name: Run tests
         run: |
