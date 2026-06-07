@@ -184,6 +184,7 @@ PYEOF
       ;;
   esac
 
+  if [ -n "${ERROR_MESSAGE}" ]; then
     ERROR_MESSAGE=$(printf '%s' "${ERROR_MESSAGE}" | head -n 5 | cut -c1-300 | html_escape)
   fi
 }
