@@ -39,8 +39,6 @@
 
 set -euo pipefail
 
-# รูปแบบ tag: SLOT-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่ — เช่น
-# rel-v1.1.2562-260525) ให้ตรงกับ tag filter pattern ของทั้ง CircleCI/GitHub Actions
 TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$'
 MAX_RETRIES=3
 RETRY_DELAY=5
@@ -78,7 +76,6 @@ normalize_ci_vars() {
 }
 
 # --- Check Obfuscate from build log ---
-# ตรวจหา "Successfully Protected!" จาก .NET Reactor output ใน build.log
 check_obfuscate() {
   if [ -f "build.log" ] && grep -q "Successfully Protected!" build.log; then
     OBFUSCATE="true"
@@ -87,15 +84,6 @@ check_obfuscate() {
   fi
 }
 
-# --- Resolve app name directly from the .csproj (no log parsing at all) ---
-# ApplicationTitle เป็น static project metadata — รู้ค่าได้จากการ "evaluate" project
-# เฉยๆ โดยไม่ต้องรอให้ build รันจบ ต่างจาก Obfuscate ที่เป็น runtime build outcome
-# (รู้ผลได้ก็ต่อเมื่อ build จบแล้วเท่านั้น จึงยังต้อง grep จาก build.log อยู่)
-#
-# ใช้ `dotnet build -getProperty:<PropertyName>` (MSBuild 17.8 / .NET SDK 8.0.300+)
-# ซึ่งเมื่อขอ property เดียว จะคืนค่าเป็น plain text ตรงๆ ใช้ใน script ได้ทันที —
-# นี่คือวิธีเดียวกับที่จะใช้ตอน migrate เข้า MAUI project จริง (ที่มี ApplicationTitle
-# อยู่แล้วโดย default) จึงไม่ต้องแก้ logic ส่วนนี้เลยตอน migrate
 check_app_name() {
   if [ -n "${APP_NAME:-}" ]; then
     return
@@ -117,8 +105,6 @@ check_app_name() {
     return
   fi
 
-  # -getProperty ต้องมีอย่างน้อย 1 element เสมอ (กัน "unbound variable" ตอน
-  # expand array ว่างภายใต้ set -u บน bash รุ่นเก่า)
   local get_prop_args=(-getProperty:ApplicationTitle)
   if [ -n "${TARGET_FRAMEWORK:-}" ]; then
     get_prop_args+=(-p:TargetFramework="${TARGET_FRAMEWORK}")
@@ -139,60 +125,34 @@ check_branch_tags() {
   BRANCH_TAGS="${tags:-"-"}"
 }
 
-# --- HTML-escape dynamic text before inserting into the Telegram message ---
-# Telegram parse_mode=HTML จะ parse ทั้งข้อความเป็น HTML — ถ้า ERROR_MESSAGE มี
-# &, <, > หลุดเข้าไปดิบๆ (เช่น C# generic "List<string>", XML snippet จาก test
-# failure, "a && b" จาก shell) Telegram จะตอบ 400 "can't parse entities" และ
-# ปฏิเสธ "ทั้งข้อความ" ไม่ใช่แค่ส่วนที่มีปัญหา — escape ให้ครบก่อนเสมอ
-# ลำดับสำคัญ: ต้อง escape `&` ก่อน ไม่งั้นจะไป escape entity (&lt; ฯลฯ) ที่เพิ่งสร้างซ้ำ
 html_escape() {
   sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
-# --- Resolve which step failed, from the marker file CI steps write ---
-# ทุก step ที่อาจพังใน workflow (Lint/Build/Run tests) ห่อด้วย
-# `|| { echo "<step name>" > ci-failed-step.txt; exit 1; }` แบบเดียวกันหมด
-# (bash ล้วน พกข้ามไปมาระหว่าง CircleCI/GitHub Actions ได้เหมือนกันเป๊ะ)
-# ทำให้จุดเดียวนี้พอจะรู้ได้ว่า step ไหนพัง โดยไม่ต้องพึ่ง API เฉพาะของแต่ละ CI
 resolve_failed_step() {
   if [ -n "${FAILED_STEP:-}" ]; then
-    return  # อนุญาตให้ override ผ่าน env var ได้ (เช่น ตอนทดสอบสคริปต์ตรงๆ)
+    return 
   fi
 
   if [ -f "ci-failed-step.txt" ]; then
     FAILED_STEP=$(head -n1 ci-failed-step.txt | tr -d '\r\n')
   else
-    # ไม่มี marker file แปลว่าพังก่อนถึง step ที่ห่อ marker ไว้ (เช่น checkout,
-    # restore, cache, install tools) — ไม่มี artifact เฉพาะให้ดึง error มาได้
     FAILED_STEP="Unknown step"
   fi
 }
 
-# --- Extract a short, relevant error snippet based on which step failed ---
-# แยก logic ตามประเภท step เพราะ output แต่ละแบบมีรูปแบบต่างกันโดยสิ้นเชิง:
-#   - MSBuild log เป็น plain text บรรทัดเดียวที่ format นิ่งมาก (เหมาะกับ grep)
-#   - JUnit XML มี structure ชัดเจน (เหมาะกับ XML parser มากกว่า regex ซึ่งจะพังง่าย
-#     ถ้า message มีหลายบรรทัด/มีอักขระพิเศษปนอยู่)
-#   - shellcheck log เป็น plain text ที่สรุปไว้ท้ายไฟล์อยู่แล้ว
 extract_error_message() {
   ERROR_MESSAGE=""
 
   case "${FAILED_STEP}" in
     "Build")
       if [ -f "build.log" ]; then
-        # MSBuild diagnostic format นิ่งมาก: "<file>(line,col): error CSxxxx: ..."
-        # หรือ "error MSBxxxx/NETSDKxxxx/NUxxxx: ..." — grep เฉพาะบรรทัด error
-        # (ไม่เอา warning) เอาแค่ 5 รายการแรก กันข้อความยาวเกินจะอ่านบนมือถือ
         ERROR_MESSAGE=$(grep -oE 'error (CS|MSB|NETSDK|NU)[0-9]+:.*' build.log | head -n 5 || true)
       fi
       ;;
 
     "Run tests")
       if [ -f "test-results/results.xml" ] && command -v python3 > /dev/null 2>&1; then
-        # parse JUnit XML ด้วย xml.etree.ElementTree แทน grep/regex — message ของ
-        # <failure>/<error> อาจมีหลายบรรทัดหรือมี XML พิเศษปนอยู่ regex จะ fragile
-        # กว่า parser ที่เข้าใจ structure จริงๆ — เอาแค่บรรทัดแรกของแต่ละ message
-        # และไม่เกิน 5 รายการ
         ERROR_MESSAGE=$(python3 - "test-results/results.xml" <<'PYEOF' 2>/dev/null || true
 import sys
 import xml.etree.ElementTree as ET
@@ -216,22 +176,14 @@ PYEOF
 
     "Lint shell scripts")
       if [ -f "shellcheck.log" ]; then
-        # shellcheck พ่น error/warning พร้อมเลขบรรทัดเป็น plain text อยู่แล้ว —
-        # กรองเฉพาะบรรทัดที่ขึ้นต้นด้วย "In ... line N:" หรือมีรหัส SCxxxx
-        # ซึ่งเป็นบรรทัดที่ informative ที่สุด ตัดบรรทัด source/pointer (^^^) ทิ้ง
         ERROR_MESSAGE=$(grep -E '^In .* line [0-9]+:|SC[0-9]{4}' shellcheck.log | head -n 5 || true)
       fi
       ;;
 
     *)
-      # ไม่รู้จัก step (พังก่อนถึง step ที่มี marker เช่น checkout/restore/cache)
-      # ไม่มี log/artifact เฉพาะให้ดึง — ปล่อยว่างไว้ ให้ build_message ใส่ fallback
       ;;
   esac
 
-  # ตัด + escape เสมอ ไม่ว่าจะดึงมาจากที่ไหน — กันทั้งข้อความยาวเกิน Telegram limit
-  # (4096 ตัวอักษรต่อข้อความ) และอักขระ &/</> ที่จะทำให้ parse_mode=HTML พังทั้งข้อความ
-  if [ -n "${ERROR_MESSAGE}" ]; then
     ERROR_MESSAGE=$(printf '%s' "${ERROR_MESSAGE}" | head -n 5 | cut -c1-300 | html_escape)
   fi
 }
@@ -257,12 +209,7 @@ parse_tag() {
   fi
 }
 
-# --- Append download links based on slot ---
-# rel/prod → Play Store + TestFlight
-# dev/sandbox/staging/non-tag → Firebase
 _append_download_links() {
-  # icon ในส่วนนี้ใช้แยก "แพลตฟอร์ม/ประเภทลิงก์" เพื่อช่วย scan/tap บนมือถือเร็วขึ้น
-  # — ตรงนี้คือส่วน call-to-action หลักของข้อความ success จึงคุ้มที่จะใส่
   case ${SLOT_KEY} in
     rel|prod)
       # Production environments → Play Store + TestFlight
@@ -303,10 +250,6 @@ build_message() {
   fi
 
   if [ "${BUILD_STATUS}" = "success" ]; then
-    # --- Success ---
-    # icon scheme: เก็บไว้เฉพาะ field ที่ "ใช้ตัดสินใจ/นำทาง" ได้จริง (ลิงก์, environment,
-    # security check) ส่วน field ที่เป็นข้อมูลอ้างอิงประจำ (App name, Tags, Commit)
-    # ตั้งใจไม่ใส่ icon — ถ้าใส่ทุกบรรทัดเท่ากันหมด จะไม่มีอะไรเด่นจริง
     MESSAGE="✅${platform_suffix}${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
     MESSAGE+="🔢 <b>Version</b>  ${APP_VERSION}${NL}"
@@ -317,8 +260,6 @@ build_message() {
     fi
 
     if [ -n "${SLOT_DISPLAY}" ]; then
-      # 🎯 เน้นเป็นพิเศษ — บอกว่า build นี้จะไป environment ไหน (dev/staging/release/prod)
-      # เป็นข้อมูลที่ผู้รับ notification ใช้ตัดสินใจขั้นต่อไปจริงๆ
       MESSAGE+="🎯 <b>Ring</b>  ${SLOT_DISPLAY}${NL}"
     fi
 
@@ -331,12 +272,6 @@ build_message() {
   else
     # --- Failed ---
     MESSAGE="❌${platform_suffix}${NL}"
-    # ⚠️ ข้อมูลที่ actionable ที่สุดในข้อความ failed — ต้องดึงสายตาก่อนสิ่งอื่นทั้งหมด
-    # บอกก่อนว่า "step ไหน" พัง (จาก ci-failed-step.txt) แล้วตามด้วย snippet ของ
-    # error message จริง (ถ้าดึงได้ — ดู extract_error_message) ห่อด้วย <pre> เพื่อ
-    # คงการขึ้นบรรทัดใหม่/จัดรูปแบบ ช่วยให้ตัดสินใจได้ทันทีว่าเป็นปัญหาประเภทไหน
-    # โดยไม่ต้องสลับไปเปิด build log ก่อน — ERROR_MESSAGE ผ่าน html_escape มาแล้ว
-    # จาก extract_error_message() เสมอ จึงปลอดภัยที่จะแทรกตรงๆ ใน parse_mode=HTML
     MESSAGE+="⚠️ <b>Failed step</b>  ${FAILED_STEP:-Unknown step}${NL}"
     if [ -n "${ERROR_MESSAGE:-}" ]; then
       MESSAGE+="📋 <b>Error detail</b>${NL}<pre>${ERROR_MESSAGE}</pre>${NL}"
@@ -402,8 +337,6 @@ check_app_name
 check_branch_tags
 parse_tag
 
-# ดึงข้อมูล error เฉพาะตอน build พัง — ตอน success ไม่มีไฟล์ ci-failed-step.txt/
-# build.log/ฯลฯ ที่จะ parse อยู่แล้ว (และ build_message ก็ไม่ได้ใช้ค่าพวกนี้ในสาขา success)
 if [ "${BUILD_STATUS}" = "failed" ]; then
   resolve_failed_step
   extract_error_message
