@@ -30,6 +30,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # ค่า default ของ actions/checkout คือ shallow clone (fetch-depth: 1)
+          # และดึงมาเฉพาะ ref เดียวที่ trigger run นี้ (เช่น แค่ tag ที่เพิ่ง push)
+          # ทำให้ `git tag --contains HEAD` ใน notify-telegram.sh มองไม่เห็น tag อื่น
+          # ที่ชี้มาที่ commit เดียวกัน (พบว่า GHA โชว์ Tags ไม่ครบ ขณะที่ CircleCI
+          # โชว์ครบ เพราะ checkout มา full history+tags อยู่แล้ว)
+          # fetch-depth: 0 = ดึง git history + tags มาทั้งหมด แก้ปัญหา Tags โชว์ไม่ครบ
+          fetch-depth: 0
 
       - name: Lint shell scripts
         run: shellcheck scripts/notify-telegram.sh
