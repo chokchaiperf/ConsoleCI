@@ -30,8 +30,8 @@
     </Target>
 
     <!-- Force failure target — ใช้ทดสอบ failed notification ด้วย -p:ForceFail=true -->
-    <!-- <Target Name="ForceFailure" AfterTargets="Build" Condition="'$(ForceFail)' == 'true'">
+    <Target Name="ForceFailure" AfterTargets="Build" Condition="'$(ForceFail)' == 'true'">
         <Error Text="Forced failure for testing notification" />
-    </Target> -->
+    </Target>
 
 </Project>
