@@ -70,7 +70,11 @@ jobs:
         run: bash scripts/notify-telegram.sh
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Dev pipeline -> ส่งเข้ากลุ่ม "Thes Pipeline Alert Dev" โดยเฉพาะ
+          # ดึงจาก secret TELEGRAM_CHAT_ID_DEV (ผู้ใช้สร้างไว้แล้วทั้งสอง CI) แทนการ
+          # hardcode ค่า chat ID ตรง ๆ — รวมศูนย์การตั้งค่าไว้ใน secret ที่เดียว
+          # ย้าย/หมุนเวียนกลุ่ม notify ในอนาคตแก้ที่เดียวจบ ไม่ต้องตามแก้หลายไฟล์
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_DEV }}
           BUILD_STATUS: ${{ job.status }}
           FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
           FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"

@@ -8,6 +8,20 @@ parameters:
 
 jobs:
   build_test:
+    # job เดียวใช้ร่วมกันทั้ง dev/release workflow (DRY) — แต่ต้อง notify คนละกลุ่ม
+    # Telegram กัน โดยค่า chat ID จริงเก็บเป็น project-level secret env var
+    # (TELEGRAM_CHAT_ID_DEV / TELEGRAM_CHAT_ID_RELEASE — ผู้ใช้สร้างไว้แล้วใน
+    # CircleCI project settings) ซึ่ง CircleCI inject เข้ามาเป็น env var ของทุก job
+    # โดยอัตโนมัติอยู่แล้ว แต่เนื่องจากทั้งสองตัวมีอยู่พร้อมกันในทุก job เราจึง
+    # ต้องบอกให้ job รู้ว่า "ต้องใช้ตัวไหน" — รับเป็น job parameter ที่เก็บแค่
+    # "ชื่อตัวแปร env" (ไม่ใช่ค่าจริง จึงไม่ใช่ความลับ ปลอดภัยที่จะใส่ใน config)
+    # แล้ว resolve ค่าจริงตอน runtime ด้วย bash indirect expansion `${!VAR_NAME}`
+    # วิธีนี้ทำให้ค่า chat ID ไม่ถูก hardcode ลงใน config เลยแม้แต่บรรทัดเดียว
+    parameters:
+      telegram_chat_id_var:
+        type: string
+        default: "TELEGRAM_CHAT_ID_DEV"
+
     docker:
       - image: mcr.microsoft.com/dotnet/sdk:10.0
 
@@ -62,8 +76,15 @@ jobs:
       - run:
           name: Notify Telegram (success)
           when: on_success
+          # << parameters.telegram_chat_id_var >> ถูกแทนที่ตอน compile config เป็น
+          # "ชื่อ" ตัวแปร env เช่น TELEGRAM_CHAT_ID_DEV (ไม่ใช่ค่าจริง) จากนั้น
+          # ${!CHAT_ID_VAR_NAME} คือ bash indirect expansion — มองหาตัวแปรที่ "ชื่อ"
+          # ตรงกับค่าของ CHAT_ID_VAR_NAME แล้วดึงค่าจริงออกมาตอน runtime เท่านั้น
+          # ผลคือค่า chat ID จริง (secret) ไม่เคยถูกเขียนลงใน config เลย
           command: |
+            CHAT_ID_VAR_NAME="<< parameters.telegram_chat_id_var >>"
             BUILD_STATUS=success \
+            TELEGRAM_CHAT_ID="${!CHAT_ID_VAR_NAME}" \
             FIREBASE_URL="https://appdistribution.firebase.google.com/mock" \
             FIREBASE_SETUP_URLS="iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web" \
             PLAY_STORE_URL="https://play.google.com/store/apps/details?id=com.example.mock" \
@@ -74,7 +95,11 @@ jobs:
       - run:
           name: Notify Telegram (failure)
           when: on_fail
-          command: BUILD_STATUS=failed bash scripts/notify-telegram.sh
+          command: |
+            CHAT_ID_VAR_NAME="<< parameters.telegram_chat_id_var >>"
+            BUILD_STATUS=failed \
+            TELEGRAM_CHAT_ID="${!CHAT_ID_VAR_NAME}" \
+            bash scripts/notify-telegram.sh
 
 workflows:
   # "dev" — รับเฉพาะ branch push / PR เท่านั้น ไม่ยุ่งกับ tag เลย
@@ -84,6 +109,10 @@ workflows:
   dev:
     jobs:
       - build_test:
+          # บอก job ว่าให้ resolve chat ID จาก secret env var ชื่อ TELEGRAM_CHAT_ID_DEV
+          # (ค่าที่ส่งตรงนี้คือ "ชื่อตัวแปร" เฉย ๆ — ค่า chat ID จริงอยู่ใน CircleCI
+          # project env var/secret ไม่เคยปรากฏใน config ไฟล์นี้เลย)
+          telegram_chat_id_var: "TELEGRAM_CHAT_ID_DEV"
           filters:
             branches:
               only: /.*/
@@ -103,6 +132,9 @@ workflows:
   release:
     jobs:
       - build_test:
+          # บอก job ว่าให้ resolve chat ID จาก secret env var ชื่อ TELEGRAM_CHAT_ID_RELEASE
+          # (เช่นเดียวกับฝั่ง dev — ส่งแค่ "ชื่อตัวแปร" ค่าจริงอยู่ใน CircleCI secret)
+          telegram_chat_id_var: "TELEGRAM_CHAT_ID_RELEASE"
           filters:
             branches:
               ignore: /.*/

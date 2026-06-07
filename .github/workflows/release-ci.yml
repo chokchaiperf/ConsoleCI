@@ -75,7 +75,11 @@ jobs:
         run: bash scripts/notify-telegram.sh
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          # Release pipeline -> ส่งเข้ากลุ่ม "Thes Pipeline Alert Prod" โดยเฉพาะ
+          # ดึงจาก secret TELEGRAM_CHAT_ID_RELEASE (ผู้ใช้สร้างไว้แล้วทั้งสอง CI)
+          # แทนการ hardcode — แยกช่องจาก dev-ci.yml ตั้งใจ เพื่อไม่ให้ noise ของ dev
+          # build ไปปนกับ noti ที่สำคัญของ release/deploy ที่ทีมต้องจับตาใกล้ชิดกว่า
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_RELEASE }}
           BUILD_STATUS: ${{ job.status }}
           FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
           FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
