@@ -34,7 +34,16 @@ jobs:
           fetch-depth: 0
 
       - name: Lint shell scripts
-        run: shellcheck scripts/notify-telegram.sh
+        # ห่อด้วย marker เดียวกับ step อื่น ๆ — ถ้า shellcheck เจอปัญหา ให้บันทึกชื่อ step
+        # ลง ci-failed-step.txt ไว้ก่อน exit non-zero เพื่อให้ Notify Telegram (failure)
+        # รู้ว่า "step ไหน" พัง (ไฟล์นี้คือ marker เดียวที่ทุก step ที่อาจพังต้องเขียน
+        # ลงเหมือนกัน — ทำให้ logic การดึง error message ฝั่ง notify-telegram.sh
+        # รวมไว้ที่จุดเดียวได้ ไม่ต้องเขียนซ้ำในแต่ละ step/แต่ละ CI)
+        # หมายเหตุ: ต้อง `set -eo pipefail` เอง เหมือน Build step — ไม่งั้น exit code
+        # ของ shellcheck จะถูก `tee` กลบจนเหลือ exit 0 และ `||` จะไม่ทำงานเลย
+        run: |
+          set -eo pipefail
+          shellcheck scripts/notify-telegram.sh 2>&1 | tee shellcheck.log || { echo "Lint shell scripts" > ci-failed-step.txt; exit 1; }
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
@@ -59,12 +68,15 @@ jobs:
         # `dotnet build` ที่ fail ถูก `tee` กลบจนเหลือ exit 0 และ step ขึ้นเขียวทั้งที่ build พัง
         run: |
           set -eo pipefail
-          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
+          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
 
       - name: Run tests
+        # marker เดียวกัน — ถ้า test ล้ม ให้บันทึก "Run tests" ไว้ก่อน exit non-zero
+        # (ไม่ต้องใส่ pipefail เพราะ step นี้ไม่ได้ pipe เข้า tee — exit code ของ
+        # `dotnet test` ส่งตรงถึง `||` อยู่แล้ว)
         run: |
           dotnet test --no-build --configuration Release \
-            --logger "junit;LogFilePath=test-results/results.xml"
+            --logger "junit;LogFilePath=test-results/results.xml" || { echo "Run tests" > ci-failed-step.txt; exit 1; }
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

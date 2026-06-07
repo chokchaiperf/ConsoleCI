@@ -34,7 +34,12 @@ jobs:
 
       - run:
           name: Lint shell scripts
-          command: shellcheck scripts/notify-telegram.sh
+          # ห่อด้วย marker เดียวกับทุก step ที่อาจพัง — เขียนชื่อ step ลง
+          # ci-failed-step.txt ก่อน exit non-zero เพื่อให้ notify-telegram.sh
+          # อ่านได้ว่า "step ไหน" พัง โดยรวม logic ดึง error message ไว้จุดเดียว
+          # (ใช้ syntax bash ล้วน — พกไปใช้ได้เหมือนกันทั้ง CircleCI/GitHub Actions)
+          command: |
+            shellcheck scripts/notify-telegram.sh 2>&1 | tee shellcheck.log || { echo "Lint shell scripts" > ci-failed-step.txt; exit 1; }
 
       - run:
           name: Generate NuGet cache key
@@ -59,11 +64,12 @@ jobs:
           # ที่ exit code ของ `dotnet build` ถูก `tee` กลบจนเหลือ exit 0
           command: |
             set -eo pipefail
-            dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
+            dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
 
       - run:
           name: Run tests
-          command: dotnet test --no-build --configuration Release --logger "junit;LogFilePath=test-results/results.xml"
+          # marker เดียวกัน — ถ้า test ล้ม บันทึก "Run tests" ไว้ก่อน exit non-zero
+          command: dotnet test --no-build --configuration Release --logger "junit;LogFilePath=test-results/results.xml" || { echo "Run tests" > ci-failed-step.txt; exit 1; }
 
       - save_cache:
           paths:
