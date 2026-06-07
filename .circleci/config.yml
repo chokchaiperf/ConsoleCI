@@ -39,7 +39,13 @@ jobs:
 
       - run:
           name: Build
-          command: dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
+          # ประกาศ `set -eo pipefail` ไว้ explicit แม้ CircleCI จะเปิดให้เป็น default อยู่แล้ว
+          # เพื่อไม่ให้ logic สำคัญ (ตรวจจับ build failure ผ่าน exit code ของ pipeline ที่ pipe เข้า tee)
+          # ขึ้นอยู่กับ default shell behavior ของ CI ใดๆ — กันปัญหาแบบที่เจอใน GitHub Actions
+          # ที่ exit code ของ `dotnet build` ถูก `tee` กลบจนเหลือ exit 0
+          command: |
+            set -eo pipefail
+            dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
 
       - run:
           name: Run tests

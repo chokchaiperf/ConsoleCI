@@ -39,7 +39,13 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        run: dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
+        # หมายเหตุ: ต้องประกาศ `set -eo pipefail` เอง — ห้ามพึ่ง default shell behavior
+        # เพราะ runner ของ GitHub Actions ไม่ได้เปิด pipefail ให้จริงเสมอไป (ต่างจาก CircleCI
+        # ที่เปิด `set -eo pipefail` เป็นค่า default ของ `run` step) ทำให้ exit code ของ
+        # `dotnet build` ที่ fail ถูก `tee` กลบจนเหลือ exit 0 และ step ขึ้นเขียวทั้งที่ build พัง
+        run: |
+          set -eo pipefail
+          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log
 
       - name: Run tests
         run: |
