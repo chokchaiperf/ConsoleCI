@@ -217,7 +217,7 @@ parse_tag() {
 
 _append_download_links() {
   case ${SLOT_KEY} in
-    rel|stg|prod)
+    rel|stg)
       # Production environments (Release/Staging) → Play Store + TestFlight
       if [ -n "${PLAY_STORE_URL:-}" ]; then
         MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
