@@ -217,8 +217,8 @@ parse_tag() {
 
 _append_download_links() {
   case ${SLOT_KEY} in
-    rel|prod)
-      # Production environments → Play Store + TestFlight
+    rel|stg|prod)
+      # Production environments (Release/Staging) → Play Store + TestFlight
       if [ -n "${PLAY_STORE_URL:-}" ]; then
         MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
       fi
@@ -230,7 +230,7 @@ _append_download_links() {
       fi
       ;;
     *)
-      # Dev/Sandbox/Staging/non-tag → Firebase
+      # Dev/Sandbox/non-tag → Firebase
       if [ -n "${FIREBASE_URL:-}" ]; then
         MESSAGE+="${NL}🔥 <b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
