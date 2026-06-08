@@ -43,7 +43,7 @@ TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$'
 MAX_RETRIES=3
 RETRY_DELAY=5
 FIREBASE_URL="https://appdistribution.firebase.google.com/testerapps/1:756920477740:android:b0c725c90101591bc38989/releases/3qschsmu3moq8?utm_source=firebase-console"
-FIREBASE_SETUP_URLS="https://drive.google.com/file/d/168aOR1lDPdUzzdXlp3rICqsUAeJh1NzM/view?usp=drive_link"
+FIREBASE_SETUP_URLS="คู่มือการติดตั้ง=https://drive.google.com/file/d/168aOR1lDPdUzzdXlp3rICqsUAeJh1NzM/view?usp=drive_link"
 PLAY_STORE_URL="https://play.google.com/store/apps/details?id=thes.mana.client"
 TESTFLIGHT_URL="https://testflight.apple.com/join/wrJSJ3QL"
 SETUP_URL="https://drive.google.com/file/d/168aOR1lDPdUzzdXlp3rICqsUAeJh1NzM/view?usp=drive_link"
