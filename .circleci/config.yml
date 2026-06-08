@@ -1,6 +1,5 @@
 version: 2.1
 
-# Force unique pipeline per tag by declaring tag as pipeline parameter
 parameters:
   GIT_TAG:
     type: string
@@ -8,15 +7,6 @@ parameters:
 
 jobs:
   build_test:
-    # job เดียวใช้ร่วมกันทั้ง dev/release workflow (DRY) — แต่ต้อง notify คนละกลุ่ม
-    # Telegram กัน โดยค่า chat ID จริงเก็บเป็น project-level secret env var
-    # (TELEGRAM_CHAT_ID_DEV / TELEGRAM_CHAT_ID_RELEASE — ผู้ใช้สร้างไว้แล้วใน
-    # CircleCI project settings) ซึ่ง CircleCI inject เข้ามาเป็น env var ของทุก job
-    # โดยอัตโนมัติอยู่แล้ว แต่เนื่องจากทั้งสองตัวมีอยู่พร้อมกันในทุก job เราจึง
-    # ต้องบอกให้ job รู้ว่า "ต้องใช้ตัวไหน" — รับเป็น job parameter ที่เก็บแค่
-    # "ชื่อตัวแปร env" (ไม่ใช่ค่าจริง จึงไม่ใช่ความลับ ปลอดภัยที่จะใส่ใน config)
-    # แล้ว resolve ค่าจริงตอน runtime ด้วย bash indirect expansion `${!VAR_NAME}`
-    # วิธีนี้ทำให้ค่า chat ID ไม่ถูก hardcode ลงใน config เลยแม้แต่บรรทัดเดียว
     parameters:
       telegram_chat_id_var:
         type: string
@@ -34,10 +24,6 @@ jobs:
 
       - run:
           name: Lint shell scripts
-          # ห่อด้วย marker เดียวกับทุก step ที่อาจพัง — เขียนชื่อ step ลง
-          # ci-failed-step.txt ก่อน exit non-zero เพื่อให้ notify-telegram.sh
-          # อ่านได้ว่า "step ไหน" พัง โดยรวม logic ดึง error message ไว้จุดเดียว
-          # (ใช้ syntax bash ล้วน — พกไปใช้ได้เหมือนกันทั้ง CircleCI/GitHub Actions)
           command: |
             shellcheck scripts/notify-telegram.sh 2>&1 | tee shellcheck.log || { echo "Lint shell scripts" > ci-failed-step.txt; exit 1; }
 
@@ -58,17 +44,12 @@ jobs:
 
       - run:
           name: Build
-          # ประกาศ `set -eo pipefail` ไว้ explicit แม้ CircleCI จะเปิดให้เป็น default อยู่แล้ว
-          # เพื่อไม่ให้ logic สำคัญ (ตรวจจับ build failure ผ่าน exit code ของ pipeline ที่ pipe เข้า tee)
-          # ขึ้นอยู่กับ default shell behavior ของ CI ใดๆ — กันปัญหาแบบที่เจอใน GitHub Actions
-          # ที่ exit code ของ `dotnet build` ถูก `tee` กลบจนเหลือ exit 0
           command: |
             set -eo pipefail
             dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
 
       - run:
           name: Run tests
-          # marker เดียวกัน — ถ้า test ล้ม บันทึก "Run tests" ไว้ก่อน exit non-zero
           command: dotnet test --no-build --configuration Release --logger "junit;LogFilePath=test-results/results.xml" || { echo "Run tests" > ci-failed-step.txt; exit 1; }
 
       - save_cache:
@@ -82,11 +63,6 @@ jobs:
       - run:
           name: Notify Telegram (success)
           when: on_success
-          # << parameters.telegram_chat_id_var >> ถูกแทนที่ตอน compile config เป็น
-          # "ชื่อ" ตัวแปร env เช่น TELEGRAM_CHAT_ID_DEV (ไม่ใช่ค่าจริง) จากนั้น
-          # ${!CHAT_ID_VAR_NAME} คือ bash indirect expansion — มองหาตัวแปรที่ "ชื่อ"
-          # ตรงกับค่าของ CHAT_ID_VAR_NAME แล้วดึงค่าจริงออกมาตอน runtime เท่านั้น
-          # ผลคือค่า chat ID จริง (secret) ไม่เคยถูกเขียนลงใน config เลย
           command: |
             CHAT_ID_VAR_NAME="<< parameters.telegram_chat_id_var >>"
             BUILD_STATUS=success \
@@ -108,16 +84,9 @@ jobs:
             bash scripts/notify-telegram.sh
 
 workflows:
-  # "dev" — รับเฉพาะ branch push / PR เท่านั้น ไม่ยุ่งกับ tag เลย
-  # (ตั้งชื่อ/แยกให้ตรงกับแนวคิดเดียวกับฝั่ง GitHub Actions ที่แยกเป็น dev-ci.yml /
-  # release-ci.yml คนละไฟล์ — มองเป็นคนละ "pipeline" กันไปเลยเพื่อให้จัดการง่ายขึ้น
-  # และตัดปัญหา push-then-tag ที่ trigger ชนกันให้หมดไป)
   dev:
     jobs:
       - build_test:
-          # บอก job ว่าให้ resolve chat ID จาก secret env var ชื่อ TELEGRAM_CHAT_ID_DEV
-          # (ค่าที่ส่งตรงนี้คือ "ชื่อตัวแปร" เฉย ๆ — ค่า chat ID จริงอยู่ใน CircleCI
-          # project env var/secret ไม่เคยปรากฏใน config ไฟล์นี้เลย)
           telegram_chat_id_var: "TELEGRAM_CHAT_ID_DEV"
           filters:
             branches:
@@ -125,21 +94,9 @@ workflows:
             tags:
               ignore: /.*/
 
-  # "release" — รับเฉพาะ tag push ที่ตรงกับ slot ที่กำหนดไว้เท่านั้น:
-  #   rel  = Release
-  #   stg  = Staging
-  #   sand = Sandbox
-  # จำกัด prefix ไว้ตรง ๆ ใน regex (แทน `[a-zA-Z]+` แบบเดิมที่ match ทุก prefix)
-  # เพื่อไม่ให้ tag อื่น ๆ ที่ไม่ได้ตั้งใจ deploy จริง (เช่น dev*, prod, tag พิมพ์ผิด)
-  # ทำให้ release pipeline รันโดยไม่ตั้งใจ
-  #
-  # รูปแบบ tag: SLOT-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่ — เช่น
-  # rel-v1.1.2562-260525) — ตรงกับที่ TAG_REGEX ใน notify-telegram.sh ใช้ parse
   release:
     jobs:
       - build_test:
-          # บอก job ว่าให้ resolve chat ID จาก secret env var ชื่อ TELEGRAM_CHAT_ID_RELEASE
-          # (เช่นเดียวกับฝั่ง dev — ส่งแค่ "ชื่อตัวแปร" ค่าจริงอยู่ใน CircleCI secret)
           telegram_chat_id_var: "TELEGRAM_CHAT_ID_RELEASE"
           filters:
             branches:

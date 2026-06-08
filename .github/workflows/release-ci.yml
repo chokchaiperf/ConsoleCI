@@ -1,17 +1,5 @@
 name: "Release CI (tags: rel / stg / sand)"
 
-# Workflow อิสระสำหรับ "release" — trigger เฉพาะตอน push tag ที่ตรงกับ slot
-# ที่กำหนดไว้เท่านั้น: rel (Release) / stg (Staging) / sand (Sandbox)
-# รูปแบบ tag: <slot>-vMAJOR.MINOR.BUILD-YYMMDD (คั่นด้วย "-" ก่อนวันที่)
-# เช่น rel-v1.1.2562-260525 — ตรงกับ TAG_REGEX ใน notify-telegram.sh
-#
-# เหตุผลที่แยกเป็นไฟล์ของตัวเอง (แทนที่จะรวมกับ branch push ในไฟล์เดียว):
-# - ใน GitHub Actions แต่ละ workflow file ถูกประเมิน trigger แยกจากกันโดยอิสระ
-#   ทำให้ tag push ที่ตามหลัง branch push ติดๆ ไม่มีทางถูก trigger ผิดเงื่อนไข
-#   หรือถูกบดบังโดย logic ของอีก trigger หนึ่งอีกต่อไป (ปัญหาที่เคยเจอ)
-# - การระบุ pattern ตรง ๆ ทีละ slot (แทน wildcard `[a-zA-Z]*-v...`) ทำให้ workflow นี้
-#   trigger เฉพาะ tag ที่ตั้งใจ deploy จริง ๆ เท่านั้น — tag อื่น ๆ (เช่น dev*, prod
-#   หรือ tag ทดลองที่สะกดผิด) จะไม่ทำให้ release pipeline รันโดยไม่ตั้งใจ
 on:
   push:
     tags:
@@ -31,20 +19,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          # ค่า default ของ actions/checkout คือ shallow clone (fetch-depth: 1)
-          # และดึงมาเฉพาะ ref เดียวที่ trigger run นี้ (เช่น แค่ tag ที่เพิ่ง push)
-          # ทำให้ `git tag --contains HEAD` ใน notify-telegram.sh มองไม่เห็น tag อื่น
-          # ที่ชี้มาที่ commit เดียวกัน (พบว่า GHA โชว์ Tags ไม่ครบ ขณะที่ CircleCI
-          # โชว์ครบ เพราะ checkout มา full history+tags อยู่แล้ว)
-          # fetch-depth: 0 = ดึง git history + tags มาทั้งหมด แก้ปัญหา Tags โชว์ไม่ครบ
           fetch-depth: 0
 
       - name: Lint shell scripts
-        # ห่อด้วย marker เดียวกับทุก step ที่อาจพัง — เขียนชื่อ step ลง ci-failed-step.txt
-        # ก่อน exit non-zero เพื่อให้ Notify Telegram (ใน notify-telegram.sh) อ่านได้ว่า
-        # "step ไหน" พัง โดยไม่ต้องเขียน logic การดึง error message ซ้ำในแต่ละ step/CI
-        # หมายเหตุ: ต้อง `set -eo pipefail` เอง เหมือน Build step — ไม่งั้น exit code
-        # ของ shellcheck จะถูก `tee` กลบจนเหลือ exit 0 และ `||` จะไม่ทำงานเลย
         run: |
           set -eo pipefail
           shellcheck scripts/notify-telegram.sh 2>&1 | tee shellcheck.log || { echo "Lint shell scripts" > ci-failed-step.txt; exit 1; }
@@ -66,17 +43,11 @@ jobs:
         run: dotnet restore
 
       - name: Build
-        # หมายเหตุ: ต้องประกาศ `set -eo pipefail` เอง — ห้ามพึ่ง default shell behavior
-        # เพราะ runner ของ GitHub Actions ไม่ได้เปิด pipefail ให้จริงเสมอไป (ต่างจาก CircleCI
-        # ที่เปิด `set -eo pipefail` เป็นค่า default ของ `run` step) ทำให้ exit code ของ
-        # `dotnet build` ที่ fail ถูก `tee` กลบจนเหลือ exit 0 และ step ขึ้นเขียวทั้งที่ build พัง
         run: |
           set -eo pipefail
           dotnet build --no-restore --configuration Release -p:MockObfuscate=true 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
 
       - name: Run tests
-        # marker เดียวกัน — ถ้า test ล้ม บันทึก "Run tests" ไว้ก่อน exit non-zero
-        # (ไม่ต้อง pipefail เพราะไม่ได้ pipe เข้า tee — exit code ส่งตรงถึง `||`)
         run: |
           dotnet test --no-build --configuration Release \
             --logger "junit;LogFilePath=test-results/results.xml" || { echo "Run tests" > ci-failed-step.txt; exit 1; }
@@ -92,10 +63,6 @@ jobs:
         run: bash scripts/notify-telegram.sh
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          # Release pipeline -> ส่งเข้ากลุ่ม "Thes Pipeline Alert Prod" โดยเฉพาะ
-          # ดึงจาก secret TELEGRAM_CHAT_ID_RELEASE (ผู้ใช้สร้างไว้แล้วทั้งสอง CI)
-          # แทนการ hardcode — แยกช่องจาก dev-ci.yml ตั้งใจ เพื่อไม่ให้ noise ของ dev
-          # build ไปปนกับ noti ที่สำคัญของ release/deploy ที่ทีมต้องจับตาใกล้ชิดกว่า
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_RELEASE }}
           BUILD_STATUS: ${{ job.status }}
           FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
