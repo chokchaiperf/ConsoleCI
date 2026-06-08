@@ -220,13 +220,13 @@ _append_download_links() {
     rel|prod)
       # Production environments → Play Store + TestFlight
       if [ -n "${PLAY_STORE_URL:-}" ]; then
-        MESSAGE+="${NL}🤖 <b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
       fi
       if [ -n "${TESTFLIGHT_URL:-}" ]; then
-        MESSAGE+="🍎 <b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
       fi
       if [ -n "${SETUP_URL:-}" ]; then
-        MESSAGE+="⚙️ <b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
+        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
       fi
       ;;
     *)
@@ -258,7 +258,7 @@ build_message() {
   if [ "${BUILD_STATUS}" = "success" ]; then
     MESSAGE="✅${platform_suffix}${NL}"
     MESSAGE+="🔗 <b>Build ID</b>  <a href=\"${BUILD_URL}\">#${BUILD_NUMBER}</a>${NL}"
-    MESSAGE+="🔢 <b>Version</b>  ${APP_VERSION}${NL}"
+    MESSAGE+="⏳ <b>Version</b>  ${APP_VERSION}${NL}"
     MESSAGE+="🌿 <b>Branch</b>  ${REF_NAME}${NL}"
 
     if [ -n "${APP_NAME:-}" ]; then
@@ -266,12 +266,12 @@ build_message() {
     fi
 
     if [ -n "${SLOT_DISPLAY}" ]; then
-      MESSAGE+="🎯 <b>Ring</b>  ${SLOT_DISPLAY}${NL}"
+      MESSAGE+="<b>Ring</b>  ${SLOT_DISPLAY}${NL}"
     fi
 
     MESSAGE+="🔒 <b>Obfuscate</b>  ${OBFUSCATE}${NL}"
     MESSAGE+="<b>Tags</b>  ${BRANCH_TAGS}${NL}"
-    MESSAGE+="<b>Commit</b>  ${COMMIT_MSG}${NL}"
+    MESSAGE+="📌 <b>Commit</b>  ${COMMIT_MSG}${NL}"
 
     _append_download_links
 
