@@ -43,7 +43,7 @@ jobs:
       - name: Build
         run: |
           set -eo pipefail
-          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=true 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
+          dotnet build --no-restore --configuration Release -p:MockObfuscate=true -p:ForceFail=false 2>&1 | tee build.log || { echo "Build" > ci-failed-step.txt; exit 1; }
 
       - name: Run tests
         run: |
