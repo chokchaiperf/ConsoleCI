@@ -66,6 +66,7 @@ jobs:
           command: |
             CHAT_ID_VAR_NAME="<< parameters.telegram_chat_id_var >>"
             BUILD_STATUS=success \
+            PLATFORM=Android \
             TELEGRAM_CHAT_ID="${!CHAT_ID_VAR_NAME}" \
             FIREBASE_URL="https://appdistribution.firebase.google.com/mock" \
             FIREBASE_SETUP_URLS="iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web" \
@@ -80,6 +81,7 @@ jobs:
           command: |
             CHAT_ID_VAR_NAME="<< parameters.telegram_chat_id_var >>"
             BUILD_STATUS=failed \
+            PLATFORM=Android \
             TELEGRAM_CHAT_ID="${!CHAT_ID_VAR_NAME}" \
             bash scripts/notify-telegram.sh
 
