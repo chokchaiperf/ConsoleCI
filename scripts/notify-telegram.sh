@@ -211,7 +211,6 @@ parse_tag() {
       dev*)    SLOT_DISPLAY="Dev-${SLOT_KEY#dev}" ;;
       stg)     SLOT_DISPLAY="Staging" ;;
       rel)     SLOT_DISPLAY="Release" ;;
-      prod)    SLOT_DISPLAY="Production" ;;
       *)       SLOT_DISPLAY=$(echo "${SLOT_KEY}" | tr '[:lower:]' '[:upper:]') ;;
     esac
   fi
@@ -220,19 +219,39 @@ parse_tag() {
 _append_download_links() {
   case ${SLOT_KEY} in
     rel|stg)
-      # Production environments (Release/Staging) → Play Store + TestFlight
-      if [ -n "${PLAY_STORE_URL:-}" ]; then
-        MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
-      fi
-      if [ -n "${TESTFLIGHT_URL:-}" ]; then
-        MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
-      fi
-      if [ -n "${SETUP_ANDROID_URL:-}" ]; then
-        MESSAGE+="<b>setup instruction (Android)</b>  <a href=\"${SETUP_ANDROID_URL}\">Link</a>${NL}"
-      fi
-      if [ -n "${SETUP_IOS_URL:-}" ]; then
-        MESSAGE+="<b>setup instruction (iOS)</b>  <a href=\"${SETUP_IOS_URL}\">Link</a>${NL}"
-      fi
+      # Production environments → links filtered by PLATFORM
+      case "${PLATFORM:-}" in
+        Android)
+          if [ -n "${PLAY_STORE_URL:-}" ]; then
+            MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+          fi
+          if [ -n "${SETUP_ANDROID_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_ANDROID_URL}\">Link</a>${NL}"
+          fi
+          ;;
+        iOS)
+          if [ -n "${TESTFLIGHT_URL:-}" ]; then
+            MESSAGE+="${NL}<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+          fi
+          if [ -n "${SETUP_IOS_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_IOS_URL}\">Link</a>${NL}"
+          fi
+          ;;
+        *)
+          if [ -n "${PLAY_STORE_URL:-}" ]; then
+            MESSAGE+="${NL}<b>Link Download (Android)</b>  <a href=\"${PLAY_STORE_URL}\">Google play store (Internal Beta)</a>${NL}"
+          fi
+          if [ -n "${TESTFLIGHT_URL:-}" ]; then
+            MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
+          fi
+          if [ -n "${SETUP_ANDROID_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction (Android)</b>  <a href=\"${SETUP_ANDROID_URL}\">Link</a>${NL}"
+          fi
+          if [ -n "${SETUP_IOS_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction (iOS)</b>  <a href=\"${SETUP_IOS_URL}\">Link</a>${NL}"
+          fi
+          ;;
+      esac
       ;;
     *)
       # Dev/Sandbox/non-tag → Firebase
