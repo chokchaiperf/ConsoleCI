@@ -31,8 +31,8 @@
 #                             test-results/results.xml, Lint shell scripts →
 #                             อ่านจาก shellcheck.log
 #   FIREBASE_URL            — Firebase App Distribution URL
-#   FIREBASE_SETUP_URLS     — pipe-separated setup links: "label=url|label=url"
-#                             e.g. "iOS=https://...|Android=https://..."
+#   FIREBASE_SETUP_ANDROID_URL — Firebase setup instruction URL (Android)
+#   FIREBASE_SETUP_IOS_URL     — Firebase setup instruction URL (iOS)
 #   PLAY_STORE_URL          — Google Play Store URL
 #   TESTFLIGHT_URL          — TestFlight URL
 #   SETUP_ANDROID_URL       — prod setup instruction URL (Android)
@@ -43,8 +43,9 @@ set -euo pipefail
 TAG_REGEX='^([a-zA-Z]+)-v([0-9]+\.[0-9]+\.[0-9]+)-([0-9]{6})$'
 MAX_RETRIES=3
 RETRY_DELAY=5
-FIREBASE_URL="https://appdistribution.firebase.google.com/testerapps/1:756920477740:android:b0c725c90101591bc38989/releases/3qschsmu3moq8?utm_source=firebase-console"
-FIREBASE_SETUP_URLS="คู่มือการติดตั้ง=https://docs.google.com/document/d/1tZNLOr_Bd5ikrx48yTOW1HixDnIUofcAqkcOPfP4Wb0/edit?usp=sharing"
+FIREBASE_URL="${FIREBASE_URL-https://appdistribution.firebase.google.com/testerapps/1:756920477740:android:b0c725c90101591bc38989/releases/3qschsmu3moq8?utm_source=firebase-console}"
+FIREBASE_SETUP_ANDROID_URL="${FIREBASE_SETUP_ANDROID_URL-https://docs.google.com/document/d/1_kL_BTgivrZiDmaP0ejOqw-Jl05aERSJkR_sJ3HyJ2U/edit?usp=sharing}"
+FIREBASE_SETUP_IOS_URL="${FIREBASE_SETUP_IOS_URL-https://docs.google.com/document/d/1tZNLOr_Bd5ikrx48yTOW1HixDnIUofcAqkcOPfP4Wb0/edit?usp=sharing}"
 PLAY_STORE_URL="https://play.google.com/store/apps/details?id=thes.mana.client"
 TESTFLIGHT_URL="https://testflight.apple.com/join/wrJSJ3QL"
 SETUP_ANDROID_URL="https://docs.google.com/document/d/1PEds3PaHYoqvTQnrW-xXlsSYAc-kO6JcnMUTKQT6Co8/edit?usp=sharing"
@@ -258,15 +259,26 @@ _append_download_links() {
       if [ -n "${FIREBASE_URL:-}" ]; then
         MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
-      if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
-        MESSAGE+="<b>Setup instruction</b>  "
-        local item label url
-        for item in ${FIREBASE_SETUP_URLS}; do
-          label="${item%%=*}"
-          url="${item#*=}"
-          MESSAGE+="<a href=\"${url}\">${label}</a>${NL}"
-        done
-      fi
+      case "${PLATFORM:-}" in
+        Android)
+          if [ -n "${FIREBASE_SETUP_ANDROID_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction</b>  <a href=\"${FIREBASE_SETUP_ANDROID_URL}\">Link</a>${NL}"
+          fi
+          ;;
+        iOS)
+          if [ -n "${FIREBASE_SETUP_IOS_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction</b>  <a href=\"${FIREBASE_SETUP_IOS_URL}\">Link</a>${NL}"
+          fi
+          ;;
+        *)
+          if [ -n "${FIREBASE_SETUP_ANDROID_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction (Android)</b>  <a href=\"${FIREBASE_SETUP_ANDROID_URL}\">Link</a>${NL}"
+          fi
+          if [ -n "${FIREBASE_SETUP_IOS_URL:-}" ]; then
+            MESSAGE+="<b>setup instruction (iOS)</b>  <a href=\"${FIREBASE_SETUP_IOS_URL}\">Link</a>${NL}"
+          fi
+          ;;
+      esac
       ;;
   esac
 }

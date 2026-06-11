@@ -65,7 +65,8 @@ jobs:
           BUILD_STATUS: ${{ job.status }}
           PLATFORM: iOS
           FIREBASE_URL: "https://appdistribution.firebase.google.com/mock"
-          FIREBASE_SETUP_URLS: "iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web"
+          FIREBASE_SETUP_ANDROID_URL: "https://mock.example.com/setup-android"
+          FIREBASE_SETUP_IOS_URL: "https://mock.example.com/setup-ios"
           PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
           TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
           SETUP_ANDROID_URL: "https://mock.example.com/setup-android"

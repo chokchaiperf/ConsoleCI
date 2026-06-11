@@ -11,6 +11,15 @@ jobs:
       telegram_chat_id_var:
         type: string
         default: "TELEGRAM_CHAT_ID_DEV"
+      firebase_url:
+        type: string
+        default: ""
+      firebase_setup_android_url:
+        type: string
+        default: ""
+      firebase_setup_ios_url:
+        type: string
+        default: ""
 
     docker:
       - image: mcr.microsoft.com/dotnet/sdk:10.0
@@ -68,8 +77,9 @@ jobs:
             BUILD_STATUS=success \
             PLATFORM=Android \
             TELEGRAM_CHAT_ID="${!CHAT_ID_VAR_NAME}" \
-            FIREBASE_URL="https://appdistribution.firebase.google.com/mock" \
-            FIREBASE_SETUP_URLS="iOS=https://mock.example.com/setup-ios|Android=https://mock.example.com/setup-android|Web=https://mock.example.com/setup-web" \
+            FIREBASE_URL="<< parameters.firebase_url >>" \
+            FIREBASE_SETUP_ANDROID_URL="<< parameters.firebase_setup_android_url >>" \
+            FIREBASE_SETUP_IOS_URL="<< parameters.firebase_setup_ios_url >>" \
             PLAY_STORE_URL="https://play.google.com/store/apps/details?id=com.example.mock" \
             TESTFLIGHT_URL="https://testflight.apple.com/join/mocktoken" \
             SETUP_ANDROID_URL="https://mock.example.com/setup-android" \
@@ -91,6 +101,9 @@ workflows:
     jobs:
       - build_test:
           telegram_chat_id_var: "TELEGRAM_CHAT_ID_DEV"
+          firebase_url: "https://appdistribution.firebase.google.com/mock"
+          firebase_setup_android_url: "https://mock.example.com/setup-android"
+          firebase_setup_ios_url: "https://mock.example.com/setup-ios"
           filters:
             branches:
               only: /.*/
