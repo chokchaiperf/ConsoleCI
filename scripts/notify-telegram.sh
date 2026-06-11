@@ -35,7 +35,8 @@
 #                             e.g. "iOS=https://...|Android=https://..."
 #   PLAY_STORE_URL          — Google Play Store URL
 #   TESTFLIGHT_URL          — TestFlight URL
-#   SETUP_URL               — prod setup instruction URL
+#   SETUP_ANDROID_URL       — prod setup instruction URL (Android)
+#   SETUP_IOS_URL           — prod setup instruction URL (iOS)
 
 set -euo pipefail
 
@@ -46,9 +47,8 @@ FIREBASE_URL="https://appdistribution.firebase.google.com/testerapps/1:756920477
 FIREBASE_SETUP_URLS="คู่มือการติดตั้ง=https://docs.google.com/document/d/1tZNLOr_Bd5ikrx48yTOW1HixDnIUofcAqkcOPfP4Wb0/edit?usp=sharing"
 PLAY_STORE_URL="https://play.google.com/store/apps/details?id=thes.mana.client"
 TESTFLIGHT_URL="https://testflight.apple.com/join/wrJSJ3QL"
-SETUP_URL="setup instruction=https://docs.google.com/document/d/1PEds3PaHYoqvTQnrW-xXlsSYAc-kO6JcnMUTKQT6Co8/edit?usp=sharing"
-SETUP_ANDROID_URL="setup instruction=https://docs.google.com/document/d/1PEds3PaHYoqvTQnrW-xXlsSYAc-kO6JcnMUTKQT6Co8/edit?usp=sharing"
-SETUP_IOS_URL="setup instruction=https://docs.google.com/document/d/1JTZD4OCtpNL5o4S7SNRZdxrvEWc5s9C6YKlAuDxGjGE/edit?usp=sharing"
+SETUP_ANDROID_URL="https://docs.google.com/document/d/1PEds3PaHYoqvTQnrW-xXlsSYAc-kO6JcnMUTKQT6Co8/edit?usp=sharing"
+SETUP_IOS_URL="https://docs.google.com/document/d/1JTZD4OCtpNL5o4S7SNRZdxrvEWc5s9C6YKlAuDxGjGE/edit?usp=sharing"
 
 # --- Validate required env vars ---
 : "${TELEGRAM_BOT_TOKEN:?ERROR: TELEGRAM_BOT_TOKEN is not set}"
@@ -227,8 +227,11 @@ _append_download_links() {
       if [ -n "${TESTFLIGHT_URL:-}" ]; then
         MESSAGE+="<b>Link Download (iOS)</b>  <a href=\"${TESTFLIGHT_URL}\">Testflight invitation</a>${NL}"
       fi
-      if [ -n "${SETUP_URL:-}" ]; then
-        MESSAGE+="<b>setup instruction</b>  <a href=\"${SETUP_URL}\">Link android or ios</a>${NL}"
+      if [ -n "${SETUP_ANDROID_URL:-}" ]; then
+        MESSAGE+="<b>setup instruction (Android)</b>  <a href=\"${SETUP_ANDROID_URL}\">Link</a>${NL}"
+      fi
+      if [ -n "${SETUP_IOS_URL:-}" ]; then
+        MESSAGE+="<b>setup instruction (iOS)</b>  <a href=\"${SETUP_IOS_URL}\">Link</a>${NL}"
       fi
       ;;
     *)
