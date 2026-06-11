@@ -13,13 +13,13 @@ jobs:
         default: "TELEGRAM_CHAT_ID_DEV"
       firebase_url:
         type: string
-        default: ""
+        default: "https://appdistribution.firebase.google.com/testerapps/1:756920477740:android:b0c725c90101591bc38989/releases/3qschsmu3moq8?utm_source=firebase-console"
       firebase_setup_android_url:
         type: string
-        default: ""
+        default: "https://docs.google.com/document/d/1_kL_BTgivrZiDmaP0ejOqw-Jl05aERSJkR_sJ3HyJ2U/edit?usp=sharing"
       firebase_setup_ios_url:
         type: string
-        default: ""
+        default: "https://docs.google.com/document/d/1tZNLOr_Bd5ikrx48yTOW1HixDnIUofcAqkcOPfP4Wb0/edit?usp=sharing"
 
     docker:
       - image: mcr.microsoft.com/dotnet/sdk:10.0
@@ -80,10 +80,6 @@ jobs:
             FIREBASE_URL="<< parameters.firebase_url >>" \
             FIREBASE_SETUP_ANDROID_URL="<< parameters.firebase_setup_android_url >>" \
             FIREBASE_SETUP_IOS_URL="<< parameters.firebase_setup_ios_url >>" \
-            PLAY_STORE_URL="https://play.google.com/store/apps/details?id=com.example.mock" \
-            TESTFLIGHT_URL="https://testflight.apple.com/join/mocktoken" \
-            SETUP_ANDROID_URL="https://mock.example.com/setup-android" \
-            SETUP_IOS_URL="https://mock.example.com/setup-ios" \
             bash scripts/notify-telegram.sh
 
       - run:
@@ -101,9 +97,6 @@ workflows:
     jobs:
       - build_test:
           telegram_chat_id_var: "TELEGRAM_CHAT_ID_DEV"
-          firebase_url: "https://appdistribution.firebase.google.com/mock"
-          firebase_setup_android_url: "https://mock.example.com/setup-android"
-          firebase_setup_ios_url: "https://mock.example.com/setup-ios"
           filters:
             branches:
               only: /.*/
@@ -114,6 +107,9 @@ workflows:
     jobs:
       - build_test:
           telegram_chat_id_var: "TELEGRAM_CHAT_ID_RELEASE"
+          firebase_url: ""
+          firebase_setup_android_url: ""
+          firebase_setup_ios_url: ""
           filters:
             branches:
               ignore: /.*/

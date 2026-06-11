@@ -66,7 +66,3 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID_RELEASE }}
           BUILD_STATUS: ${{ job.status }}
           PLATFORM: iOS
-          PLAY_STORE_URL: "https://play.google.com/store/apps/details?id=com.example.mock"
-          TESTFLIGHT_URL: "https://testflight.apple.com/join/mocktoken"
-          SETUP_ANDROID_URL: "https://mock.example.com/setup-android"
-          SETUP_IOS_URL: "https://mock.example.com/setup-ios"
