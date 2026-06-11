@@ -259,7 +259,7 @@ _append_download_links() {
         MESSAGE+="${NL}🔥 <b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
       if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
-        MESSAGE+="setup instruction <b>  </b>${NL}"
+        MESSAGE+="setup instruction <b>  </b>"
         local item label url
         for item in ${FIREBASE_SETUP_URLS}; do
           label="${item%%=*}"
