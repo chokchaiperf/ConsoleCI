@@ -256,15 +256,15 @@ _append_download_links() {
     *)
       # Dev/Sandbox/non-tag → Firebase
       if [ -n "${FIREBASE_URL:-}" ]; then
-        MESSAGE+="${NL}🔥 <b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
+        MESSAGE+="${NL}<b>Link Download</b>  <a href=\"${FIREBASE_URL}\">Firebase app distribute</a>${NL}"
       fi
       if [ -n "${FIREBASE_SETUP_URLS:-}" ]; then
-        MESSAGE+="setup instruction <b>  </b>"
+        MESSAGE+="<b>setup instruction</b>  "
         local item label url
         for item in ${FIREBASE_SETUP_URLS}; do
           label="${item%%=*}"
           url="${item#*=}"
-          MESSAGE+="• <a href=\"${url}\">${label}</a>${NL}"
+          MESSAGE+="<a href=\"${url}\">${label}</a>${NL}"
         done
       fi
       ;;
